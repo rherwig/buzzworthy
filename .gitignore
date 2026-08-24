@@ -1,0 +1,28 @@
+# Nuxt
+.nuxt
+.output
+.data
+.nitro
+.cache
+dist
+
+# Node
+node_modules
+*.log
+.DS_Store
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Prisma / SQLite
+*.db
+*.db-journal
+prisma/*.db
+prisma/dev.db
+
+# Tests / tooling
+coverage
+playwright-report
+test-results

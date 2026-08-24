@@ -1,0 +1,21 @@
+// Prisma schema — https://pris.ly/d/prisma-schema
+// Dev uses SQLite; production targets PostgreSQL. Keep the schema portable:
+// avoid SQLite-only features so switching the datasource provider stays trivial.
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = env("DATABASE_URL")
+}
+
+/// Example model — replace with your domain entities.
+model User {
+    id        Int      @id @default(autoincrement())
+    email     String   @unique
+    name      String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
