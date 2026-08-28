@@ -27,7 +27,9 @@ This is a **template / boilerplate** for future team web projects. It optimizes 
 | Database (dev)         | **SQLite**                                          | Accepted |
 | Database (prod)        | **PostgreSQL** (target; swap via Prisma datasource) | Accepted |
 | Styling                | **Tailwind CSS**                                    | Accepted |
-| UI components          | **Headless UI only** (no component library)         | Accepted |
+| Style variants         | **CVA** (`class-variance-authority`)                | Accepted |
+| UI primitives          | **Headless UI** + own `shared/ui` library           | Accepted |
+| Component workshop     | **Storybook** (standalone, Nuxt-aware framework)    | Accepted |
 | State management       | **Pinia**                                           | Accepted |
 | Unit / component tests | **Vitest** (+ `@vue/test-utils`)                    | Accepted |
 | End-to-end tests       | **Playwright**                                      | Accepted |
@@ -74,6 +76,24 @@ agents/teams may add them per-project — their absence is a decision, not an ov
 - **Pros:** unstyled, accessible primitives + full control over the design system; no
   lock-in to a component library's look.
 - **Cons:** you build/maintain the design system yourself.
+
+### CVA + own UI library (`shared/ui`)
+
+- **What:** presentational primitives live in `shared/ui` (not `components/`), styled with
+  Tailwind and [CVA](https://cva.style) for type-safe, declarative variant recipes.
+- **Pros:** keeps the design system in one place, prevents `class` string sprawl, and
+  derives prop types from the variant recipe (single source of truth). Consumed via a
+  `Ui`-prefixed barrel: `import { UiButton } from '~/shared/ui'`.
+- **See:** [`COMPONENTS.md`](./COMPONENTS.md) for the required structure and workflow.
+
+### Storybook (component workshop)
+
+- **What:** isolated development/documentation of `shared/ui` components.
+- **How:** run **standalone** via `pnpm storybook` using the `@storybook-vue/nuxt`
+  framework, which gives stories full Nuxt context. It is deliberately **not** registered
+  as a Nuxt module — doing so bundles Nitro during `nuxt dev`/`build`/`typecheck` and
+  destabilizes those core commands.
+- **Cons:** an extra toolchain and build; acceptable for the design-system payoff.
 
 ### Vitest + Playwright
 

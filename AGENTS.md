@@ -7,13 +7,18 @@ This repository is a **Vue 3 / TypeScript web-project template** designed to be
 technology choice and the reasoning behind it. Do not introduce alternative tools that
 contradict it without explicitly proposing a change to that document.
 
+**Building UI components?** Read [`docs/COMPONENTS.md`](docs/COMPONENTS.md) — it defines the
+required structure and workflow for the shared UI library (`shared/ui`).
+
 ## The stack (short form)
 
 - **Framework:** Nuxt 3 (SSR/SSG, file-based routing, auto-imports)
 - **Language:** TypeScript, `strict` mode — no `any`
 - **Backend:** Nuxt Nitro server routes (`server/`)
 - **Database:** Prisma ORM — SQLite in dev, PostgreSQL in prod (keep schema portable)
-- **Styling:** Tailwind CSS + Headless UI (no component library)
+- **Styling:** Tailwind CSS + Headless UI (no component library); variants via CVA (`class-variance-authority`)
+- **UI library:** own presentational primitives in `shared/ui`, styled with Tailwind + CVA (see `docs/COMPONENTS.md`)
+- **Component workshop:** Storybook (run standalone via `pnpm storybook`)
 - **State:** Pinia (`@pinia/nuxt`) for shared client state; use composables/`useState` for trivial local state
 - **Validation:** Zod at every external boundary (HTTP input, env vars, forms)
 - **Tests:** Vitest (unit/component) + Playwright (e2e)

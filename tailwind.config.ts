@@ -3,6 +3,7 @@ import type { Config } from 'tailwindcss'
 export default {
     content: [
         './components/**/*.{vue,js,ts}',
+        './shared/ui/**/*.{vue,js,ts}',
         './layouts/**/*.vue',
         './pages/**/*.vue',
         './composables/**/*.{js,ts}',
