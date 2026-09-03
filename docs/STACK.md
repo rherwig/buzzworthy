@@ -1,6 +1,6 @@
 # Tech Stack Decision Record
 
-> Status: **Accepted** · Last updated: 2026-08-24
+> Status: **Accepted** · Last updated: 2026-09-03
 >
 > This document records the technology choices for this Vue/TypeScript web-project
 > template and the reasoning behind them. It is the single source of truth for the
@@ -38,6 +38,7 @@ This is a **template / boilerplate** for future team web projects. It optimizes 
 | Package manager        | **pnpm**                                            | Accepted |
 | Runtime validation     | **Zod**                                             | Accepted |
 | Git hooks              | **Husky + lint-staged**                             | Accepted |
+| DB seed runner         | **tsx** (executes `prisma/seed.ts`)                 | Accepted |
 
 ### Deferred / explicitly out of scope (for now)
 
@@ -70,6 +71,10 @@ agents/teams may add them per-project — their absence is a decision, not an ov
   migrations. SQLite gives zero-infra local dev; Postgres is the production target.
 - **Cons:** heavier runtime than Drizzle; be mindful of SQLite↔Postgres feature parity.
 - **Note:** keep schema portable; avoid SQLite-only features so the prod swap stays trivial.
+- **Seeding:** `prisma/seed.ts` is run by `pnpm db:seed` (wired through `package.json#prisma.seed`).
+  Prisma shells out to a plain command, so a TypeScript seed needs a TS runner: **tsx** was
+  chosen because it is a single zero-config devDependency, unlike `ts-node`, which needs extra
+  ESM configuration in a `"type": "module"` project. It is dev-only and never ships.
 
 ### Tailwind + Headless UI (no component library)
 

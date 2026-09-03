@@ -95,7 +95,8 @@ No new core technologies are introduced; everything reuses [`STACK.md`](./STACK.
 
 Content is authored/seeded; live game state lives in the server room (not persisted in MVP).
 A purely local hotseat game keeps that same state in the browser.
-Replace the placeholder `User` model with the domain models below.
+The placeholder `User` model (and its demo routes) has been replaced by the models below.
+Each board is seeded as 5 categories × 5 clues (100–500); `pnpm db:seed` loads two sample boards.
 
 ```prisma
 model Game {
@@ -183,8 +184,9 @@ out of components (per template conventions).
 
 ## 8. Milestones
 
-1. **M0 — Data & seed:** Prisma models (§5), migration, seed script with 1–2 full boards
-   (incl. Daily Doubles). Zod schemas for board data. `GET /api/games` + `/api/games/:id`.
+1. **M0 — Data & seed — ✅ done:** Prisma models (§5), migration, seed script with 1–2 full
+   boards (incl. Daily Doubles). Zod schemas for board data (`shared/types/game.ts`, including
+   the redacted player view). `GET /api/games` + `/api/games/:id`.
 2. **M1 — Core loop (hotseat):** pure reducer in `shared/game/` + `stores/game.ts` + tests;
    seat-based lobby with all seats `Local`; `/play` board grid + clue modal, host adjudication,
    live scoreboard.

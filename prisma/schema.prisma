@@ -11,11 +11,40 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-/// Example model — replace with your domain entities.
-model User {
-    id        Int      @id @default(autoincrement())
-    email     String   @unique
-    name      String?
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+/// A complete Jeopardy board: a set of categories, each with its clues.
+/// Content only — live game/room state is never persisted (see docs/JEOPARDY.md §5).
+model Game {
+    id         String     @id @default(cuid())
+    title      String
+    categories Category[]
+    createdAt  DateTime   @default(now())
+}
+
+/// One column of the board.
+model Category {
+    id       String @id @default(cuid())
+    title    String
+    /// Column order on the board (0-based).
+    position Int
+    game     Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+    gameId   String
+    clues    Clue[]
+
+    @@unique([gameId, position])
+}
+
+/// One cell of the board: the prompt shown to players and its expected response.
+model Clue {
+    id            String   @id @default(cuid())
+    /// Point value; also determines the row within the category.
+    value         Int
+    /// The "answer" shown to players.
+    prompt        String
+    /// The expected "question" response. Never sent to player clients.
+    solution      String
+    isDailyDouble Boolean  @default(false)
+    category      Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+    categoryId    String
+
+    @@unique([categoryId, value])
 }

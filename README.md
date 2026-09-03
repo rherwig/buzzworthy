@@ -27,7 +27,8 @@ pnpm install
 
 # 2. Set up env + database (SQLite by default)
 cp .env.example .env
-pnpm db:push        # or: pnpm db:migrate
+pnpm db:migrate     # create/apply migrations
+pnpm db:seed        # load the sample Jeopardy boards
 
 # 3. Run the dev server
 pnpm dev            # http://localhost:3000
@@ -46,6 +47,7 @@ pnpm dev            # http://localhost:3000
 | `pnpm test`                         | Run unit/component tests (Vitest)  |
 | `pnpm test:e2e`                     | Run e2e tests (Playwright)         |
 | `pnpm db:migrate`                   | Create/apply a Prisma migration    |
+| `pnpm db:seed`                      | Seed sample board content          |
 | `pnpm db:studio`                    | Open Prisma Studio                 |
 
 ## Project structure
@@ -60,7 +62,7 @@ server/api/      Nitro API routes
 server/utils/    Server-only utils (Prisma client, Zod env) — auto-imported
 shared/          Types/schemas shared between client and server
 stores/          Pinia stores
-prisma/          Prisma schema + migrations
+prisma/          Prisma schema, migrations + seed
 tests/unit/      Vitest unit/component tests
 tests/e2e/       Playwright e2e tests
 ```
