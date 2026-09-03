@@ -2,6 +2,18 @@
 sessionId: session-260903-230355-ktr7
 ---
 
+> **Status note (kept for history).** This plan was written before the requirements were
+> confirmed with the host. **[`docs/JEOPARDY.md`](../../docs/JEOPARDY.md) is the source of truth.**
+> Differences that are now settled there and _not_ corrected throughout this document:
+>
+> - **Final Jeopardy is cut from the product** — ignore every `FinalClue` / final-round mention below.
+> - Joining works by **room code and shareable link**, not link only.
+> - Players buzz in (online players on their own device, host for local seats) with
+>   latency compensation; "buzzers out of scope" below is obsolete.
+> - Milestones and their order are tracked in `docs/JEOPARDY.md` §8 (online play is a fast-follow, M3).
+>
+> Implementation status: **M0 (data model, seed, board API) is done** — see the Delivery Steps note below.
+
 # Requirements
 
 ### Overview & Goals
@@ -70,11 +82,15 @@ This supersedes the earlier "local hotseat only" default (Q1) — online realtim
 
 ### Current Implementation
 
-- Nuxt 3 template with Nitro server routes under `server/api/` (e.g. [server/api/users/index.post.ts](air-file://7hfbp4buk93nr32ppoer/E:/WebProjects/experiments/ai-boilerplate/server/api/users/index.post.ts?type=file&root=C%3A)), Zod-validated at the boundary via `readValidatedBody`.
-- `server/utils/prisma.ts` exposes an auto-imported `prisma` client; `server/utils/env.ts` validates env.
-- Prisma schema currently holds only a placeholder `User` model ([prisma/schema.prisma](air-file://7hfbp4buk93nr32ppoer/E:/WebProjects/experiments/ai-boilerplate/prisma/schema.prisma?type=file&root=C%3A)).
+- Nuxt 3 template with Nitro server routes under `server/api/`, validated at the boundary with Zod
+  (`getValidatedRouterParams` / `readValidatedBody`). The board routes are `server/api/games/index.get.ts`
+  and `server/api/games/[id].get.ts`; queries and row mapping live in `server/utils/games.ts`.
+- `server/utils/prisma.ts` exposes an auto-imported `prisma` client; `server/utils/env.ts` validates env;
+  `server/utils/errors.ts` keeps internal schema failures from leaking to clients.
+- Prisma schema holds the Jeopardy domain: `Game` / `Category` / `Clue` (the placeholder `User` model and
+  its `server/api/users/*` routes were removed in M0).
 - Pinia is enabled via `@pinia/nuxt`; shared UI primitives live in `shared/ui`.
-- Prior planning is documented in `docs/JEOPARDY.md`, which currently still describes the stale "local hotseat only" MVP. **Delivery Step 1 rewrites it first** to reflect the approved local + online decision so the doc is the accurate source of truth before any code is written.
+- `docs/JEOPARDY.md` has since been rewritten to the approved local + online design and is the accurate source of truth (Delivery Step 1, done).
 
 ### Key Decisions
 
@@ -88,7 +104,10 @@ This supersedes the earlier "local hotseat only" default (Q1) — online realtim
 
 #### Data model (Prisma) — content only
 
-Board content is seeded; live game/room state is in-memory (server room) or in the Pinia store (local). Replace the placeholder `User` model.
+Board content is seeded; live game/room state is in-memory (server room) or in the Pinia store (local).
+
+**As shipped in M0** (differs from the sketch below): no `FinalClue` model, `Clue` carries both `position`
+(0-based row) and `value`, and `Game` has `createdAt` + `updatedAt`. See `prisma/schema.prisma`.
 
 ```prisma
 model Game {
@@ -136,7 +155,7 @@ model FinalClue {
 
 #### Server (online mode)
 
-- `server/api/games/index.get.ts` and `server/api/games/[id].get.ts` — list/fetch seeded boards (Zod-validated output), following the existing `users` route style.
+- `server/api/games/index.get.ts` and `server/api/games/[id].get.ts` — list/fetch seeded boards (Zod-validated output) via the `server/utils/games.ts` repository. _Shipped in M0._
 - `server/api/rooms/index.post.ts` — create a room for a chosen `gameId`; returns `{ roomId }` used to build the share link.
 - `server/utils/rooms.ts` — in-memory room registry (`Map<roomId, RoomState>`) plus helpers to apply a validated command via `shared/game/engine.ts`.
 - `server/routes/ws/room.ts` — `defineWebSocketHandler` with `open`/`message`/`close`. On message: parse+validate command (Zod), authorize (only host may reveal/adjudicate/start; a peer may only `claimSlot` for itself), apply via engine, then broadcast `roomState` to the room via `peer.publish`/subscribe channel keyed by `roomId`.
@@ -159,8 +178,11 @@ model FinalClue {
 ### File Structure
 
 ```
-prisma/schema.prisma          # replace User with Game/Category/Clue/FinalClue
-prisma/seed.ts                # seed 1-2 full boards (+ Daily Doubles + Final)
+prisma/schema.prisma          # Game/Category/Clue (no FinalClue) — done
+prisma/boards.ts              # bundled board content (+ boards.test.ts) — done
+prisma/seed.ts                # transactional seed of the bundled boards — done
+server/utils/games.ts         # board repository + row mapping (+ games.test.ts) — done
+server/utils/errors.ts        # internal-error mapping for handlers — done
 shared/types/game.ts          # board/player/slot/phase Zod + types
 shared/types/room.ts          # command + event Zod schemas
 shared/game/engine.ts         # pure reducer (+ engine.test.ts)
@@ -253,10 +275,12 @@ Most game rules live in the pure `shared/game/engine.ts` reducer, so the bulk of
 
 Seeded Jeopardy boards are fetchable via HTTP.
 
-- Replace the placeholder `User` model in `prisma/schema.prisma` with `Game`, `Category`, `Clue`, `FinalClue`; create the migration.
-- Add `prisma/seed.ts` seeding 1–2 full boards including Daily Doubles and a Final Jeopardy clue.
-- Add Zod schemas + inferred types in `shared/types/game.ts` for board/player/slot/phase.
-- Add `server/api/games/index.get.ts` and `server/api/games/[id].get.ts` (Zod-validated output) following the existing `users` route style.
+_Done (M0), with these deviations:_
+
+- Replaced the placeholder `User` model in `prisma/schema.prisma` with `Game`, `Category`, `Clue` (no `FinalClue`); migrations created.
+- Added `prisma/boards.ts` (content) + `prisma/seed.ts` (transactional, refuses to run in production) seeding two full boards with Daily Doubles.
+- Added Zod schemas + inferred types for board content in `shared/types/game.ts`; player/slot/phase types follow with the engine.
+- Added `server/api/games/index.get.ts` and `server/api/games/[id].get.ts` (Zod-validated output) on top of the `server/utils/games.ts` repository.
 
 ### Step 3: Shared game engine and local hotseat mode
 

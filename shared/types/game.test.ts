@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { clueSchema, gameSchema, publicGameSchema, toPublicGame, type Game } from './game'
+import {
+    CLUE_VALUES,
+    clueSchema,
+    clueValueSchema,
+    gameSchema,
+    publicGameSchema,
+    toPublicGame,
+    type Game,
+} from './game'
 
 const board: Game = {
     id: 'game-1',
@@ -12,6 +20,7 @@ const board: Game = {
             clues: [
                 {
                     id: 'clue-1',
+                    position: 0,
                     value: 100,
                     prompt: 'The capital of France.',
                     solution: 'What is Paris?',
@@ -19,6 +28,7 @@ const board: Game = {
                 },
                 {
                     id: 'clue-2',
+                    position: 1,
                     value: 200,
                     prompt: 'The capital of Japan.',
                     solution: 'What is Tokyo?',
@@ -29,6 +39,20 @@ const board: Game = {
     ],
 }
 
+describe('clueValueSchema', () => {
+    it('accepts every value from CLUE_VALUES', () => {
+        for (const value of CLUE_VALUES) {
+            expect(clueValueSchema.safeParse(value).success).toBe(true)
+        }
+    })
+
+    it('rejects values outside the board layout', () => {
+        for (const value of [0, -100, 137, 600]) {
+            expect(clueValueSchema.safeParse(value).success).toBe(false)
+        }
+    })
+})
+
 describe('gameSchema', () => {
     it('accepts a well-formed board', () => {
         expect(gameSchema.safeParse(board).success).toBe(true)
@@ -38,10 +62,11 @@ describe('gameSchema', () => {
         expect(gameSchema.safeParse({ ...board, categories: [] }).success).toBe(false)
     })
 
-    it('rejects a clue with a non-positive value', () => {
+    it('rejects a clue with a value that is not a board value', () => {
         const result = clueSchema.safeParse({
             id: 'clue-1',
-            value: 0,
+            position: 0,
+            value: 137,
             prompt: 'The capital of France.',
             solution: 'What is Paris?',
             isDailyDouble: false,
@@ -59,18 +84,20 @@ describe('toPublicGame', () => {
         expect(JSON.stringify(publicBoard)).not.toContain('What is Paris?')
     })
 
-    it('keeps prompts, values and Daily Double flags', () => {
+    it('keeps prompts, positions, values and Daily Double flags', () => {
         const [category] = toPublicGame(board).categories
 
         expect(category?.clues).toEqual([
             {
                 id: 'clue-1',
+                position: 0,
                 value: 100,
                 prompt: 'The capital of France.',
                 isDailyDouble: false,
             },
             {
                 id: 'clue-2',
+                position: 1,
                 value: 200,
                 prompt: 'The capital of Japan.',
                 isDailyDouble: true,

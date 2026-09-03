@@ -8,13 +8,34 @@ import { z } from 'zod'
  * owned by the game reducer in `shared/game/` — see docs/JEOPARDY.md.
  */
 
-/** Point values a clue may take, cheapest first (row order within a category). */
+/**
+ * Point values a clue may take, cheapest first.
+ * The single source of truth for the board layout: the array index is the row
+ * position and the entry is that row's score. Seeds and validation derive from it.
+ */
 export const CLUE_VALUES = [100, 200, 300, 400, 500] as const
+
+export type ClueValue = (typeof CLUE_VALUES)[number]
+
+/** Number of rows every category must provide. */
+export const CLUES_PER_CATEGORY = CLUE_VALUES.length
+
+const isClueValue = (value: number): value is ClueValue =>
+    (CLUE_VALUES as readonly number[]).includes(value)
+
+/** A clue's score — constrained to the values defined by `CLUE_VALUES`. */
+export const clueValueSchema = z
+    .number()
+    .int()
+    .refine(isClueValue, {
+        message: `Clue value must be one of: ${CLUE_VALUES.join(', ')}`,
+    })
 
 /** A clue as players see it: the solution is deliberately absent. */
 export const publicClueSchema = z.object({
     id: z.string().min(1),
-    value: z.number().int().positive(),
+    position: z.number().int().nonnegative(),
+    value: clueValueSchema,
     prompt: z.string().min(1),
     isDailyDouble: z.boolean(),
 })
@@ -56,6 +77,8 @@ export const gameSummarySchema = z.object({
 
 export type GameSummary = z.infer<typeof gameSummarySchema>
 
+export const gameSummaryListSchema = z.array(gameSummarySchema)
+
 export const publicCategorySchema = categorySchema.extend({
     clues: z.array(publicClueSchema).min(1),
 })
@@ -69,16 +92,13 @@ export const publicGameSchema = gameSchema.extend({
 
 export type PublicGame = z.infer<typeof publicGameSchema>
 
-/** Strip solutions from a board before it reaches a player client. */
+/**
+ * Strip solutions from a board before it reaches a player client.
+ *
+ * Parsing against `publicGameSchema` does the redaction: Zod objects drop keys
+ * they don't declare, so a clue can never leak a field the player schema omits —
+ * including fields added to `Clue` in the future.
+ */
 export function toPublicGame(game: Game): PublicGame {
-    return {
-        id: game.id,
-        title: game.title,
-        categories: game.categories.map((category) => ({
-            id: category.id,
-            title: category.title,
-            position: category.position,
-            clues: category.clues.map(({ solution: _solution, ...clue }) => clue),
-        })),
-    }
+    return publicGameSchema.parse(game)
 }

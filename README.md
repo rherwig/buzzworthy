@@ -59,12 +59,12 @@ composables/     Reusable client logic (auto-imported)
 layouts/         Layout components
 pages/           File-based routes
 server/api/      Nitro API routes
-server/utils/    Server-only utils (Prisma client, Zod env) — auto-imported
+server/utils/    Server-only utils (Prisma client, Zod env, repositories) — auto-imported
 shared/          Types/schemas shared between client and server
 stores/          Pinia stores
-prisma/          Prisma schema, migrations + seed
-tests/unit/      Vitest unit/component tests
+prisma/          Prisma schema, migrations, board content + seed
 tests/e2e/       Playwright e2e tests
+*.test.ts        Vitest unit/component tests, next to the code they cover
 ```
 
 ## Code style

@@ -97,6 +97,9 @@ Content is authored/seeded; live game state lives in the server room (not persis
 A purely local hotseat game keeps that same state in the browser.
 The placeholder `User` model (and its demo routes) has been replaced by the models below.
 Each board is seeded as 5 categories × 5 clues (100–500); `pnpm db:seed` loads two sample boards.
+Row **position** and point **value** are separate columns so a board may repeat a value without
+breaking the layout; the allowed values come from `CLUE_VALUES` in `shared/types/game.ts`, which
+the seed and the Zod schemas both derive from.
 
 ```prisma
 model Game {
@@ -104,6 +107,7 @@ model Game {
     title      String
     categories Category[]
     createdAt  DateTime   @default(now())
+    updatedAt  DateTime   @updatedAt // timestamps on the aggregate root only
 }
 
 model Category {
@@ -117,7 +121,8 @@ model Category {
 
 model Clue {
     id            String   @id @default(cuid())
-    value         Int      // point value (row within category)
+    position      Int      // row order within the category (0-based)
+    value         Int      // point value awarded
     prompt        String   // the "answer" shown to players
     solution      String   // the expected "question" response
     isDailyDouble Boolean  @default(false)
@@ -186,7 +191,9 @@ out of components (per template conventions).
 
 1. **M0 — Data & seed — ✅ done:** Prisma models (§5), migration, seed script with 1–2 full
    boards (incl. Daily Doubles). Zod schemas for board data (`shared/types/game.ts`, including
-   the redacted player view). `GET /api/games` + `/api/games/:id`.
+   the redacted player view). `GET /api/games` + `/api/games/:id`, backed by the
+   `server/utils/games.ts` board repository (queries + order-guaranteeing row mapping in one place,
+   reused by the WS room in M3).
 2. **M1 — Core loop (hotseat):** pure reducer in `shared/game/` + `stores/game.ts` + tests;
    seat-based lobby with all seats `Local`; `/play` board grid + clue modal, host adjudication,
    live scoreboard.
