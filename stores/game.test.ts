@@ -1,0 +1,90 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
+import { makeBoard } from '~~/shared/game/game.fixture'
+import { useGameStore } from './game'
+
+describe('game store', () => {
+    beforeEach(() => {
+        setActivePinia(createPinia())
+    })
+
+    it('starts empty', () => {
+        const store = useGameStore()
+
+        expect(store.state).toBeNull()
+        expect(store.phase).toBeNull()
+        expect(store.seats).toEqual([])
+        expect(store.canStart).toBe(false)
+    })
+
+    it('ignores actions while no game is open', () => {
+        const store = useGameStore()
+
+        store.openClue('clue-0-0')
+        store.buzz(0)
+
+        expect(store.state).toBeNull()
+    })
+
+    it('opens a lobby and exposes the seat setup', () => {
+        const store = useGameStore()
+        store.openLobby(makeBoard(), 2)
+
+        expect(store.phase).toBe('lobby')
+        expect(store.seats).toHaveLength(2)
+        expect(store.setupError).toBeNull()
+        expect(store.canStart).toBe(true)
+    })
+
+    it('reports why an invalid lobby cannot start', () => {
+        const store = useGameStore()
+        store.openLobby(makeBoard(), 2)
+        store.renameSeat(0, '')
+
+        expect(store.canStart).toBe(false)
+        expect(store.setupError).toBe('Every local seat needs a name.')
+
+        store.startGame()
+        expect(store.phase).toBe('lobby')
+    })
+
+    it('plays a clue through to a scored board', () => {
+        const store = useGameStore()
+        store.openLobby(makeBoard(), 2)
+        store.renameSeat(0, 'Ada')
+        store.startGame()
+        store.openClue('clue-0-0')
+
+        expect(store.clue?.prompt).toBe('Prompt 0-0')
+
+        store.buzz(1, 1_000)
+        expect(store.activeSeat?.name).toBe('Player 2')
+
+        store.adjudicate(true)
+        expect(store.phase).toBe('board')
+        expect(store.results[0]).toMatchObject({ name: 'Player 2', score: 100, rank: 1 })
+    })
+
+    it('pauses and resumes without losing the open clue', () => {
+        const store = useGameStore()
+        store.openLobby(makeBoard(), 2)
+        store.startGame()
+        store.openClue('clue-0-1')
+        store.pause()
+
+        expect(store.phase).toBe('paused')
+
+        store.resume()
+        expect(store.phase).toBe('clue')
+        expect(store.clue?.id).toBe('clue-0-1')
+    })
+
+    it('clears everything on reset', () => {
+        const store = useGameStore()
+        store.openLobby(makeBoard(), 2)
+        store.reset()
+
+        expect(store.state).toBeNull()
+        expect(store.error).toBeNull()
+    })
+})

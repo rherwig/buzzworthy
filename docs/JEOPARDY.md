@@ -75,21 +75,21 @@ remains a proposed default adopted to keep momentum and is reversible.
 
 No new core technologies are introduced; everything reuses [`STACK.md`](./STACK.md).
 
-| Concern              | Choice                                          | Notes                                                                                    |
-| -------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Framework / routing  | **Nuxt 3** (`pages/`)                           | `/` home, `/lobby/:code` seat setup, `/play/:code` game screen, `/results/:code` summary |
-| Language             | **TypeScript strict**                           | shared types between client & Nitro server                                               |
-| API                  | **Nitro server routes** (`server/api/…`)        | fetch boards, lobby/room lifecycle                                                       |
-| Realtime             | **Nitro WebSockets** (`defineWebSocketHandler`) | room pub/sub: seat changes, buzz-in, clue state                                          |
-| ORM / DB             | **Prisma** + SQLite (dev) / Postgres (prod)     | board content models; keep schema portable                                               |
-| Validation           | **Zod**                                         | validate API responses, game setup input & every WS message                              |
-| State                | **Pinia** store (`stores/game.ts`)              | client mirror of server state + optimistic UI                                            |
-| Styling              | **Tailwind + CVA**                              | board grid, clue modal, scoreboard                                                       |
-| UI primitives        | **`shared/ui`** (Headless UI)                   | reuse `UiButton`, add `UiModal`/dialog for clues                                         |
-| Component workshop   | **Storybook**                                   | stories for board tile, scoreboard, clue modal                                           |
-| Unit/component tests | **Vitest**                                      | reducer logic, scoring, wager bounds, seat/buzz rules                                    |
-| E2E                  | **Playwright**                                  | full loop, incl. multi-context test: host + online seat                                  |
-| Clock sync           | **WS ping/pong**                                | per-client offset estimate feeding latency-compensated buzz                              |
+| Concern              | Choice                                          | Notes                                                                                                           |
+| -------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Framework / routing  | **Nuxt 3** (`pages/`)                           | `/` board picker, `/lobby` seat setup, `/play` game screen; the `:code` variants arrive with online rooms in M3 |
+| Language             | **TypeScript strict**                           | shared types between client & Nitro server                                                                      |
+| API                  | **Nitro server routes** (`server/api/…`)        | fetch boards, lobby/room lifecycle                                                                              |
+| Realtime             | **Nitro WebSockets** (`defineWebSocketHandler`) | room pub/sub: seat changes, buzz-in, clue state                                                                 |
+| ORM / DB             | **Prisma** + SQLite (dev) / Postgres (prod)     | board content models; keep schema portable                                                                      |
+| Validation           | **Zod**                                         | validate API responses, game setup input & every WS message                                                     |
+| State                | **Pinia** store (`stores/game.ts`)              | client mirror of server state + optimistic UI                                                                   |
+| Styling              | **Tailwind + CVA**                              | board grid, clue modal, scoreboard                                                                              |
+| UI primitives        | **`shared/ui`** (Headless UI)                   | reuse `UiButton`, add `UiModal`/dialog for clues                                                                |
+| Component workshop   | **Storybook**                                   | stories for board tile, scoreboard, clue modal                                                                  |
+| Unit/component tests | **Vitest**                                      | reducer logic, scoring, wager bounds, seat/buzz rules                                                           |
+| E2E                  | **Playwright**                                  | full loop, incl. multi-context test: host + online seat                                                         |
+| Clock sync           | **WS ping/pong**                                | per-client offset estimate feeding latency-compensated buzz                                                     |
 
 ## 5. Proposed data model (Prisma)
 
@@ -194,9 +194,14 @@ out of components (per template conventions).
    the redacted player view). `GET /api/games` + `/api/games/:id`, backed by the
    `server/utils/games.ts` board repository (queries + order-guaranteeing row mapping in one place,
    reused by the WS room in M3).
-2. **M1 — Core loop (hotseat):** pure reducer in `shared/game/` + `stores/game.ts` + tests;
-   seat-based lobby with all seats `Local`; `/play` board grid + clue modal, host adjudication,
-   live scoreboard.
+2. **M1 — Core loop (hotseat) — ✅ done:** pure reducer in `shared/game/` (`state.ts` transitions,
+   `selectors.ts` queries, `types.ts`) with unit tests; `stores/game.ts` as a thin Pinia holder that
+   delegates every transition to the reducer; `/` board picker, `/lobby` seat setup (seat count,
+   names, `Local`/`Open`/`Closed`), `/play` board grid + clue dialog (`UiModal`), host adjudication,
+   live scoreboard, number-key buzzing for local seats and final standings; Playwright hotseat spec.
+   Known limits carried into later milestones: the game lives in memory only (a refresh returns to
+   the board picker), `Open` seats cannot be claimed until M3, Daily Double is still played as a
+   normal clue until M2, and the scoreboard is hidden behind the clue dialog while a clue is open.
 3. **M2 — Twists:** Daily Double wager flow; `/results` end-of-game standings.
 4. **M3 — Online seats (fast-follow, §7):** room create + code/link join, WS channel with Zod
    message schemas, server-authoritative reducer, `Open`/`Closed` seat kinds, remote buzz-in with

@@ -61,6 +61,7 @@ pages/           File-based routes
 server/api/      Nitro API routes
 server/utils/    Server-only utils (Prisma client, Zod env, repositories) — auto-imported
 shared/          Types/schemas shared between client and server
+shared/game/     Pure, framework-agnostic game reducer (state, actions, selectors)
 stores/          Pinia stores
 prisma/          Prisma schema, migrations, board content + seed
 tests/e2e/       Playwright e2e tests

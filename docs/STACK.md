@@ -147,5 +147,5 @@ agents/teams may add them per-project — their absence is a decision, not an ov
 - **Validation at boundaries:** validate all external input (HTTP, env, forms) with Zod.
 - **Tests:** Vitest for units/components, Playwright for critical user flows.
 - **Test location:** co-locate unit/component tests next to the code they cover
-  (e.g. `stores/counter.test.ts` beside `stores/counter.ts`). Playwright e2e specs stay
+  (e.g. `stores/game.test.ts` beside `stores/game.ts`). Playwright e2e specs stay
   in `tests/e2e/` since they exercise whole flows, not a single module.
