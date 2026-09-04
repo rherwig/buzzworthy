@@ -7,8 +7,8 @@ import { UiButton } from '~/shared/ui'
  *
  * - hotseat / online host: board grid, live scores, the open clue and adjudication.
  *   Local seats buzz from this keyboard — number keys map to seat 1…`MAX_SEATS`.
- * - online player: the same board and scores (Q1g), and a buzzer for its own seat
- *   inside the clue dialog; picking clues and judging answers stay with the host.
+ * - online player: the same board and scores (Q1g), and a dedicated full-size buzzer
+ *   (`BuzzerPanel`) once a clue opens; picking clues and judging stay with the host.
  */
 const game = useGameStore()
 const router = useRouter()
@@ -59,6 +59,13 @@ function leave(): void {
 function finish(): void {
     game.endGame()
 }
+
+/** Is this device's own seat locked out of the open clue? */
+const ownSeatLocked = computed(
+    () =>
+        game.mySeatIndex !== null &&
+        (game.state?.lockedSeatIndexes.includes(game.mySeatIndex) ?? false),
+)
 </script>
 
 <template>
@@ -95,19 +102,29 @@ function finish(): void {
             @close="game.closeClue"
         />
 
-        <ClueDialog
-            v-else-if="game.clue && game.phase !== 'dailyDouble'"
-            :clue="game.clue"
-            :seats="game.seats"
-            :active-seat="game.activeSeat"
-            :locked-seat-indexes="game.state.lockedSeatIndexes"
-            :wager="game.state.wager"
-            :own-seat-index="game.mySeatIndex"
-            :can-adjudicate="isHost"
-            @buzz="game.buzz"
-            @adjudicate="game.adjudicate"
-            @close="game.closeClue"
-        />
+        <template v-else-if="game.clue && game.phase !== 'dailyDouble'">
+            <ClueDialog
+                v-if="isHost"
+                :clue="game.clue"
+                :seats="game.seats"
+                :active-seat="game.activeSeat"
+                :locked-seat-indexes="game.state.lockedSeatIndexes"
+                :wager="game.state.wager"
+                @buzz="game.buzz"
+                @adjudicate="game.adjudicate"
+                @close="game.closeClue"
+            />
+
+            <BuzzerPanel
+                v-else
+                :clue="game.clue"
+                :seat="game.mySeat"
+                :active-seat="game.activeSeat"
+                :locked="ownSeatLocked"
+                :wager="game.state.wager"
+                @buzz="game.buzz"
+            />
+        </template>
 
         <p v-if="code" class="text-xs text-muted">Room {{ code }}</p>
     </div>

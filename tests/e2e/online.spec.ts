@@ -64,15 +64,18 @@ test('a remote player claims a seat, buzzes and is scored by the host', async ({
     const clue = page.getByRole('button', { name: /for 100$/ }).first()
     await clue.click()
 
-    // The clue reaches the player's own device (Q1g) — with a buzzer for its seat
-    // only, and never with the solution.
-    const buzzer = player.page.getByTestId('buzz-seat-1')
+    // The clue reaches the player's own device (Q1g) — as one big buzzer for its own
+    // seat, never as the host's per-seat list, and never with the solution.
+    const buzzer = player.page.getByTestId('buzzer')
     await expect(buzzer).toBeEnabled()
+    await expect(buzzer).toHaveText('BUZZ')
     await expect(player.page.getByTestId('buzz-seat-0')).toBeHidden()
     await expect(player.page.getByText('Solution:')).toBeHidden()
 
     await buzzer.click()
 
+    // Immediate local feedback, then the server's confirmation.
+    await expect(buzzer).toHaveText("You're in!")
     await expect(page.getByText('Grace buzzed in.')).toBeVisible()
     await page.getByRole('button', { name: 'Correct' }).click()
 

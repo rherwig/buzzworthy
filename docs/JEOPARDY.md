@@ -184,7 +184,12 @@ out of components (per template conventions).
   message type.
 - **Player view:** an online client receives the full board and scoreboard, not just a buzzer, so
   the remote screen is self-sufficient. Clue solutions are **never** sent to player clients —
-  only to the host.
+  only to the host. Once a clue opens, the player device shows `BuzzerPanel` — the prompt plus a
+  single full-width **BUZZ** control — while the host keeps `ClueDialog` (per-seat buzzers and
+  adjudication); the two roles deliberately do not share one template. The buzzer has explicit
+  states (`ready` → `pressed` → `you're in!` / `<name> buzzed` / `locked out`), acknowledges the
+  press **locally and immediately** so latency never makes it feel lost, also triggers on
+  <kbd>Space</kbd>/<kbd>Enter</kbd>, and vibrates the device where supported.
 - **Answering:** answers are spoken over a voice channel the players arrange themselves; after a
   buzz the host simply marks correct or wrong. No answer text travels over the wire.
 - **Host presence:** if the host socket drops, the room moves to `paused` and every client shows
@@ -228,6 +233,10 @@ out of components (per template conventions).
    memory of a single server instance.
 5. **M4 — Polish & tests:** `shared/ui` components + Storybook stories; Vitest coverage of
    scoring/wager/seat/buzz-ordering invariants; a11y & responsive pass.
+   Done so far: the player-device buzzer (`components/BuzzerPanel.vue`, unit-tested, asserted in
+   the online Playwright spec), which replaced the host clue dialog filtered down to one seat.
+   Still open: a per-clue countdown/timer, the scoreboard being hidden behind the open clue
+   dialog, and the wider a11y/responsive pass.
 6. **M5+ (deferred):** board authoring UI (Q2), result persistence (Q4), spectators & chat.
 
 ## 9. Definition of done (MVP)

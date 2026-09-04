@@ -7,8 +7,8 @@ import { UiButton, UiModal } from '~/shared/ui'
  * buzzed — the solution plus the correct/wrong adjudication.
  *
  * Answers are spoken out loud (docs/JEOPARDY.md Q1f), so there is no answer input.
- * On a player device the clue carries no solution, so that line simply disappears, and
- * the only buzzer shown is that player's own — the host sees all local seats instead.
+ * This is the host view only: a player device gets `BuzzerPanel` instead, so the two
+ * roles no longer share one template.
  */
 const props = defineProps<{
     clue: StateClue
@@ -17,10 +17,6 @@ const props = defineProps<{
     lockedSeatIndexes: readonly number[]
     /** Accepted Daily Double wager: it replaces the clue value and closes the buzzers. */
     wager?: number | null
-    /** Seat this device may buzz for; `null` (the host) means every occupied seat. */
-    ownSeatIndex?: number | null
-    /** Only the host judges answers and closes the clue. */
-    canAdjudicate?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -33,17 +29,9 @@ const solution = computed(() => clueSolution(props.clue))
 
 const buzzers = computed(() =>
     props.seats
-        .filter(
-            (seat) =>
-                isSeatOccupied(seat) &&
-                (props.ownSeatIndex === null ||
-                    props.ownSeatIndex === undefined ||
-                    props.ownSeatIndex === seat.index),
-        )
+        .filter(isSeatOccupied)
         .map((seat) => ({ seat, locked: props.lockedSeatIndexes.includes(seat.index) })),
 )
-
-const adjudicable = computed(() => props.canAdjudicate !== false)
 </script>
 
 <template>
@@ -78,7 +66,7 @@ const adjudicable = computed(() => props.canAdjudicate !== false)
             </UiButton>
         </div>
 
-        <template v-if="adjudicable" #footer>
+        <template #footer>
             <template v-if="activeSeat">
                 <UiButton variant="secondary" @click="emit('adjudicate', false)">Wrong</UiButton>
                 <UiButton @click="emit('adjudicate', true)">Correct</UiButton>
