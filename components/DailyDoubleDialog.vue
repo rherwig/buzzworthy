@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { isSeatOccupied, type Seat, type WagerBounds } from '~~/shared/game'
-import { UiButton, UiModal } from '~/shared/ui'
+import { UiButton, UiModal } from '~/ui'
 
 /**
  * The wager step of a Daily Double (docs/JEOPARDY.md §6): the host says which seat

@@ -1,0 +1,19 @@
+# Everything the image neither builds from nor ships.
+node_modules
+.nuxt
+.output
+.git
+.gitignore
+.idea
+.junie
+dist
+storybook-static
+playwright-report
+test-results
+coverage
+.env
+.env.*
+!.env.example
+*.log
+prisma/*.db
+prisma/*.db-journal

@@ -1,0 +1,51 @@
+# Fly.io configuration for Buzzworthy. See docs/DEPLOY.md for the walkthrough.
+#
+# Deliberately a single machine: rooms live in this process's memory
+# (server/utils/rooms.ts) and players hold WebSocket connections to it, so a second
+# instance would serve games it knows nothing about. Keep `fly scale count 1`.
+
+app = 'buzzworthy'
+primary_region = 'fra'
+
+[build]
+
+[env]
+  # SQLite on the mounted volume. Only board content is stored here; a running game
+  # is never persisted, so losing this file costs one reseed.
+  DATABASE_URL = 'file:/data/buzzworthy.db'
+  NODE_ENV = 'production'
+  # Set to '1' for the first deploy (or after changing the boards) to load the bundled
+  # boards on boot, then set it back to '0'. Replaces all board content.
+  SEED_ON_BOOT = '0'
+
+[mounts]
+  source = 'buzzworthy_data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # Stopping when idle is what makes this nearly free. A WebSocket counts as an active
+  # request, so a machine is never stopped mid-game — but a room does not survive the
+  # machine going to sleep between sessions, which is fine: nobody is playing then.
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  # One machine, so never let the platform decide to add another under load.
+  processes = ['app']
+
+  [http_service.concurrency]
+    type = 'connections'
+    soft_limit = 200
+    hard_limit = 250
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '20s'
+    method = 'GET'
+    path = '/api/health'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'

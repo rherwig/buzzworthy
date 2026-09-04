@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Seat, StateClue } from '~~/shared/game'
-import { UiModal } from '~/shared/ui'
+import { UiModal } from '~/ui'
 
 /**
  * The open clue as a *player* sees it on its own device: the prompt and one big

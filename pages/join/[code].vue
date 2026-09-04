@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { roomRoute } from '~~/shared/game'
-import { UiButton } from '~/shared/ui'
+import { UiButton } from '~/ui'
 
 /**
  * Where an online player arrives, by link or after typing the room code (Q1c).

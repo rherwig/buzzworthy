@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MAX_SEATS, MIN_SEATS, joinPath, type SeatKind } from '~~/shared/game'
-import { UiButton } from '~/shared/ui'
+import { UiButton } from '~/ui'
 
 /**
  * Seat setup, RTS-lobby style: every seat is `Local`, `Open` or `Closed`.

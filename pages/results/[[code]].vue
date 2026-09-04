@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { UiButton } from '~/shared/ui'
+import { UiButton } from '~/ui'
 
 /**
  * End-of-game screen (docs/JEOPARDY.md M2), for a hotseat game (`/results`) or an

@@ -3,17 +3,20 @@
 > Status: **Accepted** · Last updated: 2026-08-28
 >
 > How to build UI components in this template. Read this before adding or changing
-> anything under [`shared/ui`](../shared/ui). It complements [`STACK.md`](./STACK.md)
+> anything under [`ui`](../ui). It complements [`STACK.md`](./STACK.md)
 > (the source of truth for _which_ tools we use) by describing _how_ we use them.
 
-## The shared UI library (`shared/ui`)
+## The shared UI library (`ui`)
 
-Reusable, presentational components live in [`shared/ui`](../shared/ui) — **not** in
+Reusable, presentational components live in [`ui`](../ui) — **not** in
 `components/`. Use them as the project's design-system primitives.
+The library is not under `shared/` because Nuxt treats that directory as isomorphic
+TypeScript and feeds it to the Nitro server build, which cannot parse `.vue` files;
+`pnpm build` failed until the components were moved.
 
 - `components/` — app-specific, feature-bound components (may use Pinia stores, fetch
   data, know about routes).
-- `shared/ui/` — generic, reusable, **presentational** primitives (button, input, modal,
+- `ui/` — generic, reusable, **presentational** primitives (button, input, modal,
   …). No business logic, no store access, no data fetching. Driven purely by props/slots
   and emit events back out.
 
@@ -23,14 +26,14 @@ Components are exported from a single barrel with a `Ui` prefix and consumed via
 Nuxt `~` alias (which points at the project root):
 
 ```ts
-import { UiButton } from '~/shared/ui'
+import { UiButton } from '~/ui'
 ```
 
-Do **not** deep-import (`~/shared/ui/button/button.vue`) — always go through the barrel.
+Do **not** deep-import (`~/ui/button/button.vue`) — always go through the barrel.
 
 ## Anatomy of a component
 
-Every component lives in its own folder under `shared/ui/<name>/` and is made of these
+Every component lives in its own folder under `ui/<name>/` and is made of these
 files (using `button` as the reference example):
 
 | File                  | Required? | Responsibility                                          |
@@ -41,14 +44,14 @@ files (using `button` as the reference example):
 | `<name>.test.ts`      | Always    | Vitest + `@vue/test-utils` unit/component tests.        |
 | `<name>.stories.ts`   | Always    | Storybook stories covering the variants.                |
 
-Then re-export the component from [`shared/ui/index.ts`](../shared/ui/index.ts) with a
+Then re-export the component from [`ui/index.ts`](../ui/index.ts) with a
 `Ui` prefix.
 
 ### Requirements checklist
 
 When adding a component, all of the following must hold:
 
-1. **Folder + files.** Create `shared/ui/<name>/` with `<name>.vue`,
+1. **Folder + files.** Create `ui/<name>/` with `<name>.vue`,
    `<name>.types.ts`, `<name>.test.ts`, `<name>.stories.ts`, and — only if constants are
    needed — `<name>.constants.ts`.
 2. **Types first.** Declare `Props`/`Emits` in `<name>.types.ts`. No `any`, no non-null
@@ -66,7 +69,7 @@ When adding a component, all of the following must hold:
 6. **A story per component.** Add `<name>.stories.ts` with an `autodocs`-tagged `meta`
    and one story per meaningful variant/state.
 7. **Export from the barrel.** Add `export { default as Ui<Name> } from './<name>/<name>.vue'`
-   to `shared/ui/index.ts`, plus its public types.
+   to `ui/index.ts`, plus its public types.
 8. **Green gates.** `pnpm test`, `pnpm typecheck`, and `pnpm lint` must all pass, and the
    code must be Prettier-formatted (`pnpm format`). Never hand-format.
 
@@ -94,5 +97,5 @@ this import, utility classes are not generated and components render unstyled.
 
 ## Reference example
 
-See [`shared/ui/button`](../shared/ui/button) for a complete, canonical implementation of
+See [`ui/button`](../ui/button) for a complete, canonical implementation of
 all of the above.

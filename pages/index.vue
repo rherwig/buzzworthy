@@ -8,7 +8,7 @@ import {
 } from '~~/shared/game'
 import { gameSummaryListSchema, type GameSummary } from '~~/shared/types/game'
 import { APP_NAME, APP_TAGLINE } from '~~/shared/branding'
-import { UiButton } from '~/shared/ui'
+import { UiButton } from '~/ui'
 
 /**
  * Board picker and front door.

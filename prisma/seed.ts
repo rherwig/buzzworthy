@@ -6,7 +6,9 @@ import { boards, clueValueForRow } from './boards'
  *
  * Destructive: **every** existing board is deleted first (cascading to categories
  * and clues) so repeated runs produce the same content. Refuses to run when
- * `NODE_ENV=production` to keep it away from shared databases.
+ * `NODE_ENV=production` to keep it away from shared databases — set
+ * `ALLOW_DESTRUCTIVE_SEED=1` to override, which is how a deployed instance loads its
+ * boards (only content is stored; live games are never persisted).
  *
  * This script owns its own PrismaClient on purpose: `server/utils/prisma.ts`
  * relies on Nitro auto-imports (`useEnv`) and cannot be imported from a plain
@@ -15,8 +17,11 @@ import { boards, clueValueForRow } from './boards'
 const prisma = new PrismaClient()
 
 async function main(): Promise<void> {
-    if (process.env.NODE_ENV === 'production') {
-        throw new Error('Refusing to seed: this script deletes all boards and NODE_ENV=production.')
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DESTRUCTIVE_SEED !== '1') {
+        throw new Error(
+            'Refusing to seed: this script deletes all boards and NODE_ENV=production. ' +
+                'Set ALLOW_DESTRUCTIVE_SEED=1 if that is intended.',
+        )
     }
 
     // One transaction: a mid-run failure must not leave a half-seeded database.

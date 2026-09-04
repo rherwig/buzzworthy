@@ -81,21 +81,21 @@ remains a proposed default adopted to keep momentum and is reversible.
 
 No new core technologies are introduced; everything reuses [`STACK.md`](./STACK.md).
 
-| Concern              | Choice                                          | Notes                                                                                                                                          |
-| -------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework / routing  | **Nuxt 3** (`pages/`)                           | `/` board picker + code entry, `/join/:code` seat claim, and `/lobby`, `/play`, `/results` — each with an optional `/:code` for an online room |
-| Language             | **TypeScript strict**                           | shared types between client & Nitro server                                                                                                     |
-| API                  | **Nitro server routes** (`server/api/…`)        | fetch boards, lobby/room lifecycle                                                                                                             |
-| Realtime             | **Nitro WebSockets** (`defineWebSocketHandler`) | room pub/sub: seat changes, buzz-in, clue state                                                                                                |
-| ORM / DB             | **Prisma** + SQLite (dev) / Postgres (prod)     | board content models; keep schema portable                                                                                                     |
-| Validation           | **Zod**                                         | validate API responses, game setup input & every WS message                                                                                    |
-| State                | **Pinia** store (`stores/game.ts`)              | client mirror of server state + optimistic UI                                                                                                  |
-| Styling              | **Tailwind + CVA**                              | board grid, clue modal, scoreboard                                                                                                             |
-| UI primitives        | **`shared/ui`** (Headless UI)                   | reuse `UiButton`, add `UiModal`/dialog for clues                                                                                               |
-| Component workshop   | **Storybook**                                   | stories for board tile, scoreboard, clue modal                                                                                                 |
-| Unit/component tests | **Vitest**                                      | reducer logic, scoring, wager bounds, seat/buzz rules                                                                                          |
-| E2E                  | **Playwright**                                  | full loop, incl. multi-context test: host + online seat                                                                                        |
-| Clock sync           | **WS ping/pong**                                | per-client offset estimate feeding latency-compensated buzz                                                                                    |
+| Concern              | Choice                                          | Notes                                                                                                                                            |
+| -------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Framework / routing  | **Nuxt 3** (`pages/`)                           | `/` board picker + code entry, `/join/:code` seat claim, and `/lobby`, `/play`, `/results` — each with an optional `/:code` for an online room   |
+| Language             | **TypeScript strict**                           | shared types between client & Nitro server                                                                                                       |
+| API                  | **Nitro server routes** (`server/api/…`)        | fetch boards, lobby/room lifecycle                                                                                                               |
+| Realtime             | **Nitro WebSockets** (`defineWebSocketHandler`) | room pub/sub: seat changes, buzz-in, clue state                                                                                                  |
+| ORM / DB             | **Prisma** + SQLite (dev) / Postgres (prod)     | board content models; keep schema portable                                                                                                       |
+| Validation           | **Zod**                                         | validate API responses, game setup input & every WS message                                                                                      |
+| State                | **Pinia** store (`stores/game.ts`)              | client mirror of server state + optimistic UI                                                                                                    |
+| Styling              | **Tailwind + CVA**                              | board grid, clue modal, scoreboard                                                                                                               |
+| UI primitives        | **`ui/`** (Headless UI)                         | reuse `UiButton`, add `UiModal`/dialog for clues — at the project root, since Nuxt feeds `shared/` to the Nitro build, which cannot parse `.vue` |
+| Component workshop   | **Storybook**                                   | stories for board tile, scoreboard, clue modal                                                                                                   |
+| Unit/component tests | **Vitest**                                      | reducer logic, scoring, wager bounds, seat/buzz rules                                                                                            |
+| E2E                  | **Playwright**                                  | full loop, incl. multi-context test: host + online seat                                                                                          |
+| Clock sync           | **WS ping/pong**                                | per-client offset estimate feeding latency-compensated buzz                                                                                      |
 
 ## 5. Proposed data model (Prisma)
 
@@ -264,7 +264,15 @@ out of components (per template conventions).
    single `Host` button. Every game is now a server-authoritative room (`/lobby/:code`), and
    whether a seat is local or remote is decided per seat in the lobby, which is where that choice
    belongs — a purely local game just ignores its code (§7 "Mixed seats").
-8. **Not planned:** a board authoring UI (Q2 keeps seeded content), result persistence (Q4),
+8. **M7 — Deployment — ✅ done:** a multi-stage `Dockerfile` (Nitro output plus only the Prisma
+   CLI and `tsx`) with `docker-entrypoint.sh` running `prisma migrate deploy` on boot and an
+   opt-in `SEED_ON_BOOT`, and `fly.toml` for **one** Fly.io machine with SQLite on a volume at
+   `/data`. The single-instance constraint follows directly from §7: rooms live in the process's
+   memory and players hold WebSocket connections to it, which is also why serverless hosts are
+   ruled out. Getting there required moving the UI primitives from `shared/ui` to a top-level
+   `ui/`: Nuxt hands `shared/` to the Nitro build, which cannot parse `.vue`, so `nuxt build`
+   had never actually succeeded. See [`DEPLOY.md`](./DEPLOY.md).
+9. **Not planned:** a board authoring UI (Q2 keeps seeded content), result persistence (Q4),
    spectators & chat.
 
 ## 9. Definition of done (MVP)
@@ -281,5 +289,5 @@ out of components (per template conventions).
 - Closing the host tab pauses the room; reopening it with the host token resumes it in place.
 - Daily Double wagers work and respect score bounds.
 - Scores are correct throughout; results screen shows final standings.
-- `pnpm lint`, `pnpm typecheck`, Vitest, and the Playwright happy-path all pass.
+- `pnpm lint`, `pnpm typecheck`, `pnpm build`, Vitest, and the Playwright happy-path all pass.
 - No new dependencies outside [`STACK.md`](./STACK.md); `STACK.md` updated if that changes.

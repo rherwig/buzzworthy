@@ -22,6 +22,7 @@ for the full decision record and [`AGENTS.md`](AGENTS.md) for agent/contributor 
 | Lint / format   | ESLint (flat) + Prettier                   |
 | Git hooks       | Husky + lint-staged                        |
 | Package manager | pnpm                                       |
+| Deployment      | Docker image on Fly.io (one machine)       |
 
 ## Getting started
 
@@ -45,6 +46,17 @@ device. An all-local game just never hands out its code.
 
 The colour scheme is picked in the header. Only the schemes listed in `composables/useTheme.ts`
 are offered; `assets/css/tailwind.css` holds a few more as a development palette.
+
+## Deployment
+
+```bash
+fly deploy -e SEED_ON_BOOT=1     # first deploy: migrate + load the boards
+```
+
+One Fly.io machine with SQLite on a mounted volume. It must stay a **single** instance:
+live rooms are held in that process's memory and players are attached to it over WebSockets,
+which also rules out serverless hosts. See [`docs/DEPLOY.md`](docs/DEPLOY.md) for the full
+walkthrough, `Dockerfile` / `fly.toml` for the configuration.
 
 ## Scripts
 
@@ -73,8 +85,9 @@ pages/           File-based routes
 server/api/      Nitro API routes
 server/routes/   Non-API Nitro routes, incl. the `_ws/room` WebSocket channel
 server/utils/    Server-only utils (Prisma client, Zod env, repositories, room registry) — auto-imported
-shared/          Types/schemas shared between client and server
+shared/          Types/schemas shared between client and server (TypeScript only)
 shared/game/     Pure, framework-agnostic game core: reducer, selectors, room protocol
+ui/              Presentational primitives (Tailwind + CVA), see docs/COMPONENTS.md
 stores/          Pinia stores
 prisma/          Prisma schema, migrations, board content + seed
 tests/e2e/       Playwright e2e tests

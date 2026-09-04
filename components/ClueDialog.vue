@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { clueSolution, isSeatOccupied, type Seat, type StateClue } from '~~/shared/game'
-import { UiButton, UiModal } from '~/shared/ui'
+import { UiButton, UiModal } from '~/ui'
 
 /**
  * The open clue, as the host sees it: the prompt, the buzzers and — once a seat has

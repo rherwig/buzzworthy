@@ -8,7 +8,7 @@ technology choice and the reasoning behind it. Do not introduce alternative tool
 contradict it without explicitly proposing a change to that document.
 
 **Building UI components?** Read [`docs/COMPONENTS.md`](docs/COMPONENTS.md) — it defines the
-required structure and workflow for the shared UI library (`shared/ui`).
+required structure and workflow for the shared UI library (`ui`).
 
 ## The stack (short form)
 
@@ -17,7 +17,7 @@ required structure and workflow for the shared UI library (`shared/ui`).
 - **Backend:** Nuxt Nitro server routes (`server/`)
 - **Database:** Prisma ORM — SQLite in dev, PostgreSQL in prod (keep schema portable)
 - **Styling:** Tailwind CSS + Headless UI (no component library); variants via CVA (`class-variance-authority`)
-- **UI library:** own presentational primitives in `shared/ui`, styled with Tailwind + CVA (see `docs/COMPONENTS.md`)
+- **UI library:** own presentational primitives in `ui`, styled with Tailwind + CVA (see `docs/COMPONENTS.md`)
 - **Component workshop:** Storybook (run standalone via `pnpm storybook`)
 - **State:** Pinia (`@pinia/nuxt`) for shared client state; use composables/`useState` for trivial local state
 - **Validation:** Zod at every external boundary (HTTP input, env vars, forms)
@@ -44,6 +44,11 @@ required structure and workflow for the shared UI library (`shared/ui`).
 
 ## Explicitly deferred (do not assume these are missing by mistake)
 
-GitHub Actions CI · Docker/docker-compose · Conventional Commits + commitlint.
+GitHub Actions CI · docker-compose · Conventional Commits + commitlint.
 These were considered and left out of the base template on purpose. Add them per-project
 when there's a concrete need, and record the decision in `docs/STACK.md`.
+
+**Deployment is not deferred any more:** a multi-stage `Dockerfile` plus `fly.toml` ship the
+app to a single Fly.io machine with SQLite on a volume — see [`docs/DEPLOY.md`](docs/DEPLOY.md).
+It must stay **one** instance: live rooms live in that process's memory and players hold
+WebSocket connections to it.

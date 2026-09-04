@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MAX_SEATS } from '~~/shared/game'
-import { UiButton } from '~/shared/ui'
+import { UiButton } from '~/ui'
 
 /**
  * The game screen, for every kind of participant.

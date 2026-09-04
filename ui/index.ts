@@ -3,7 +3,10 @@
  *
  * Components are exported with a `Ui` prefix so call sites read clearly, e.g.:
  *
- *   import { UiButton } from '~/shared/ui'
+ *   import { UiButton } from '~/ui'
+ *
+ * Lives at the project root rather than under `shared/`: Nuxt scans `shared/` for
+ * isomorphic TypeScript and feeds it to the Nitro build, which cannot parse `.vue`.
  */
 export { default as UiButton } from './button/button.vue'
 export { buttonVariants } from './button/button.constants'

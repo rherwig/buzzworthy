@@ -28,7 +28,7 @@ This is a **template / boilerplate** for future team web projects. It optimizes 
 | Database (prod)        | **PostgreSQL** (target; swap via Prisma datasource) | Accepted |
 | Styling                | **Tailwind CSS**                                    | Accepted |
 | Style variants         | **CVA** (`class-variance-authority`)                | Accepted |
-| UI primitives          | **Headless UI** + own `shared/ui` library           | Accepted |
+| UI primitives          | **Headless UI** + own `ui/` library                 | Accepted |
 | Component workshop     | **Storybook** (standalone, Nuxt-aware framework)    | Accepted |
 | State management       | **Pinia**                                           | Accepted |
 | Unit / component tests | **Vitest** (+ `@vue/test-utils`)                    | Accepted |
@@ -40,6 +40,8 @@ This is a **template / boilerplate** for future team web projects. It optimizes 
 | Git hooks              | **Husky + lint-staged**                             | Accepted |
 | DB seed runner         | **tsx** (executes `prisma/seed.ts`)                 | Accepted |
 | Realtime transport     | **Nitro WebSockets** (`defineWebSocketHandler`)     | Accepted |
+| Container image        | **Docker** (multi-stage, `node:22-slim`)            | Accepted |
+| Hosting                | **Fly.io**, one machine + volume (SQLite)           | Accepted |
 
 ### Deferred / explicitly out of scope (for now)
 
@@ -47,8 +49,28 @@ These were considered and **intentionally not included** in the base template. F
 agents/teams may add them per-project — their absence is a decision, not an oversight.
 
 - **GitHub Actions CI** — quality gates run locally via hooks for now; add CI per project.
-- **Docker / docker-compose** — add for prod parity/onboarding when needed.
 - **Conventional Commits + commitlint** — add if automated changelog/versioning is wanted.
+- **docker-compose** — the single `Dockerfile` needs no orchestration; add one if a project
+  gains a second service (Postgres, Redis).
+
+### Docker + Fly.io (deployment)
+
+- **What:** a multi-stage `Dockerfile` (builder runs `nuxt build`; the runtime ships the
+  self-contained Nitro output plus only the Prisma CLI and `tsx`) with
+  `docker-entrypoint.sh` running `prisma migrate deploy` on boot. `fly.toml` runs **one**
+  machine with a volume at `/data` holding the SQLite file.
+- **Why not serverless:** the app keeps live rooms in process memory and serves WebSockets
+  (`server/utils/rooms.ts`, `server/routes/_ws/room.ts`). Vercel/Netlify/Workers give a fresh
+  short-lived context per request, so they would require moving room state out of process first.
+- **Pros:** one artifact that runs on any container host, so the platform choice stays
+  reversible; scale-to-zero keeps the cost near nothing for a game played occasionally.
+- **Cons:** Docker was previously deferred, so this adds a second build path to maintain; the
+  app is deliberately **not horizontally scalable** (`fly scale count 1`), and a cold start
+  costs a few seconds after idle.
+- **See:** [`DEPLOY.md`](./DEPLOY.md).
+
+> **Note on Docker being "deferred":** it was, as a _template_ concern. It is now Accepted
+> because this repository ships an actual deployed product.
 
 ## Rationale
 
@@ -97,18 +119,20 @@ agents/teams may add them per-project — their absence is a decision, not an ov
   lock-in to a component library's look.
 - **Cons:** you build/maintain the design system yourself.
 
-### CVA + own UI library (`shared/ui`)
+### CVA + own UI library (`ui/`)
 
-- **What:** presentational primitives live in `shared/ui` (not `components/`), styled with
+- **What:** presentational primitives live in `ui/` (not `components/`), styled with
   Tailwind and [CVA](https://cva.style) for type-safe, declarative variant recipes.
 - **Pros:** keeps the design system in one place, prevents `class` string sprawl, and
   derives prop types from the variant recipe (single source of truth). Consumed via a
-  `Ui`-prefixed barrel: `import { UiButton } from '~/shared/ui'`.
+  `Ui`-prefixed barrel: `import { UiButton } from '~/ui'`.
+- **Why not `shared/`:** Nuxt reserves `shared/` for isomorphic TypeScript and hands it to the
+  Nitro build, which cannot parse `.vue` — `nuxt build` failed while the library lived there.
 - **See:** [`COMPONENTS.md`](./COMPONENTS.md) for the required structure and workflow.
 
 ### Storybook (component workshop)
 
-- **What:** isolated development/documentation of `shared/ui` components.
+- **What:** isolated development/documentation of `ui/` components.
 - **How:** run **standalone** via `pnpm storybook` using the `@storybook-vue/nuxt`
   framework, which gives stories full Nuxt context. It is deliberately **not** registered
   as a Nuxt module — doing so bundles Nitro during `nuxt dev`/`build`/`typecheck` and
