@@ -52,11 +52,14 @@ export function seatAt(state: GameState, index: number): Seat | null {
  * `buzzed` counts as open too: while the host has not adjudicated yet, a buzz that
  * travelled slowly may still arrive and win on its corrected timestamp. Closing that
  * collection window is the transport layer's job (docs/JEOPARDY.md §7).
+ *
+ * A Daily Double is never buzzable: it belongs to the seat that wagered on it.
  */
 export function canSeatBuzz(state: GameState, seatIndex: number): boolean {
     const seat = seatAt(state, seatIndex)
 
     return (
+        state.wager === null &&
         (state.phase === 'clue' || state.phase === 'buzzed') &&
         seat !== null &&
         isSeatOccupied(seat) &&

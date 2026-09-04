@@ -79,6 +79,24 @@ describe('game store', () => {
         expect(store.clue?.id).toBe('clue-0-1')
     })
 
+    it('exposes the daily double wager range for the chosen seat', () => {
+        const store = useGameStore()
+        store.openLobby(makeBoard(2, 2, 'clue-0-1'), 2)
+        store.startGame()
+        store.openClue('clue-0-1')
+
+        expect(store.phase).toBe('dailyDouble')
+        expect(store.wagerRange).toBeNull()
+
+        store.chooseWagerSeat(1)
+        expect(store.wagerSeat?.name).toBe('Player 2')
+        expect(store.wagerRange).toEqual({ min: 5, max: 200 })
+
+        store.setWager(75)
+        store.adjudicate(true)
+        expect(store.results[0]).toMatchObject({ name: 'Player 2', score: 75 })
+    })
+
     it('clears everything on reset', () => {
         const store = useGameStore()
         store.openLobby(makeBoard(), 2)

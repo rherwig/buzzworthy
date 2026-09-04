@@ -1,6 +1,6 @@
 import type { Game } from '../types/game'
 import { allClues, canSeatBuzz, findClue, isSeatOccupied, occupiedSeats, seatAt } from './selectors'
-import type { GamePhase, GameState, Seat, SeatKind } from './types'
+import type { GamePhase, GameState, Seat, SeatKind, WagerBounds } from './types'
 
 /**
  * The game reducer: pure transitions from one `GameState` to the next.
@@ -17,6 +17,9 @@ export const DEFAULT_SEAT_COUNT = 3
 
 /** Seats a game needs before it may start. */
 export const MIN_OCCUPIED_SEATS = 2
+
+/** Smallest Daily Double wager (docs/JEOPARDY.md §6). */
+export const MIN_WAGER = 5
 
 function makeSeat(index: number, kind: SeatKind = 'local'): Seat {
     return {
@@ -48,6 +51,8 @@ export function createGameState(board: Game, seatCount: number = DEFAULT_SEAT_CO
         buzzOrder: [],
         activeSeatIndex: null,
         lockedSeatIndexes: [],
+        wagerSeatIndex: null,
+        wager: null,
     }
 }
 
@@ -172,24 +177,87 @@ export function startGame(state: GameState): GameState {
 
 // --- Play --------------------------------------------------------------------
 
-/** Reveal a clue and open the buzzers. Already-revealed clues are ignored. */
+/**
+ * Reveal a clue. A normal clue opens the buzzers straight away; a Daily Double first
+ * goes through the wager phase, where the host names the seat that uncovered it and
+ * how much it risks. Already-revealed clues are ignored.
+ */
 export function openClue(state: GameState, clueId: string): GameState {
     if (state.phase !== 'board') {
         return state
     }
 
-    if (state.revealedClueIds.includes(clueId) || findClue(state.board, clueId) === null) {
+    const clue = findClue(state.board, clueId)
+
+    if (clue === null || state.revealedClueIds.includes(clueId)) {
         return state
     }
 
     return {
         ...state,
-        phase: 'clue',
+        phase: clue.isDailyDouble ? 'dailyDouble' : 'clue',
         currentClueId: clueId,
         buzzOrder: [],
         activeSeatIndex: null,
         lockedSeatIndexes: [],
+        wagerSeatIndex: null,
+        wager: null,
     }
+}
+
+// --- Daily Double ------------------------------------------------------------
+
+/**
+ * The range the nominated seat may wager, or `null` while no Daily Double is being
+ * set up. A seat may always risk at least the clue's face value, which keeps the
+ * range usable for a seat sitting on zero or a negative score.
+ *
+ * Lives here rather than in `selectors.ts` because it shares `MIN_WAGER` with the
+ * transition that enforces it — one rule, one place.
+ */
+export function wagerBounds(state: GameState): WagerBounds | null {
+    const clue = state.currentClueId === null ? null : findClue(state.board, state.currentClueId)
+    const seat = state.wagerSeatIndex === null ? null : seatAt(state, state.wagerSeatIndex)
+
+    if (state.phase !== 'dailyDouble' || clue === null || seat === null) {
+        return null
+    }
+
+    return { min: MIN_WAGER, max: Math.max(seat.score, clue.value) }
+}
+
+/** The seat the host nominated to play the open Daily Double. */
+export function chooseWagerSeat(state: GameState, seatIndex: number): GameState {
+    const seat = seatAt(state, seatIndex)
+
+    if (state.phase !== 'dailyDouble' || state.wager !== null) {
+        return state
+    }
+
+    if (seat === null || !isSeatOccupied(seat)) {
+        return state
+    }
+
+    return { ...state, wagerSeatIndex: seatIndex }
+}
+
+/**
+ * Accept the wager and hand the clue to the nominated seat — nobody else may answer,
+ * so the game goes straight to `buzzed`. Out-of-range amounts are rejected rather than
+ * clamped, so the host UI has to offer a valid number in the first place.
+ */
+export function setWager(state: GameState, amount: number): GameState {
+    const bounds = wagerBounds(state)
+
+    if (state.phase !== 'dailyDouble' || bounds === null || state.wagerSeatIndex === null) {
+        return state
+    }
+
+    if (!Number.isInteger(amount) || amount < bounds.min || amount > bounds.max) {
+        return state
+    }
+
+    return { ...state, phase: 'buzzed', wager: amount, activeSeatIndex: state.wagerSeatIndex }
 }
 
 /**
@@ -231,10 +299,12 @@ export function adjudicate(state: GameState, correct: boolean): GameState {
     }
 
     const seatIndex = state.activeSeatIndex
-    const delta = correct ? clue.value : -clue.value
+    const stake = state.wager ?? clue.value
+    const delta = correct ? stake : -stake
     const scored = mapSeat(state, seatIndex, (seat) => ({ ...seat, score: seat.score + delta }))
 
-    if (correct) {
+    // A Daily Double belongs to one seat only: right or wrong, the clue is over.
+    if (correct || state.wager !== null) {
         return closeClue(scored)
     }
 
@@ -256,7 +326,9 @@ export function adjudicate(state: GameState, correct: boolean): GameState {
  * revealed either way, so a board always runs down to `done`.
  */
 export function closeClue(state: GameState): GameState {
-    if (state.currentClueId === null || (state.phase !== 'clue' && state.phase !== 'buzzed')) {
+    const closable: GamePhase[] = ['clue', 'buzzed', 'dailyDouble']
+
+    if (state.currentClueId === null || !closable.includes(state.phase)) {
         return state
     }
 
@@ -270,13 +342,15 @@ export function closeClue(state: GameState): GameState {
         buzzOrder: [],
         activeSeatIndex: null,
         lockedSeatIndexes: [],
+        wagerSeatIndex: null,
+        wager: null,
         revealedClueIds,
     }
 }
 
 /** Host left: freeze the room. No action is accepted again until `resume`. */
 export function pause(state: GameState): GameState {
-    const pausable: GamePhase[] = ['board', 'clue', 'buzzed']
+    const pausable: GamePhase[] = ['board', 'dailyDouble', 'clue', 'buzzed']
 
     if (!pausable.includes(state.phase)) {
         return state
@@ -300,7 +374,15 @@ export function endGame(state: GameState): GameState {
         return state
     }
 
-    return { ...state, phase: 'done', currentClueId: null, activeSeatIndex: null, buzzOrder: [] }
+    return {
+        ...state,
+        phase: 'done',
+        currentClueId: null,
+        activeSeatIndex: null,
+        buzzOrder: [],
+        wagerSeatIndex: null,
+        wager: null,
+    }
 }
 
 /** Mark a remote occupant's connection state (M3); local seats are always connected. */

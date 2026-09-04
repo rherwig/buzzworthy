@@ -4,6 +4,7 @@ import {
     adjudicate,
     buzz,
     canStartGame,
+    chooseWagerSeat,
     closeClue,
     createGameState,
     currentClue,
@@ -15,8 +16,10 @@ import {
     seatSetupError,
     setSeatCount,
     setSeatKind,
+    setWager,
     standings,
     startGame,
+    wagerBounds,
     type GameState,
     type SeatKind,
 } from '~~/shared/game'
@@ -48,6 +51,12 @@ export const useGameStore = defineStore('game', () => {
     const setupError = computed(() => (state.value === null ? null : seatSetupError(state.value)))
     const canStart = computed(() => state.value !== null && canStartGame(state.value))
     const results = computed(() => (state.value === null ? [] : standings(state.value)))
+    const wagerRange = computed(() => (state.value === null ? null : wagerBounds(state.value)))
+    const wagerSeat = computed(() =>
+        state.value === null || state.value.wagerSeatIndex === null
+            ? null
+            : (seats.value.find((seat) => seat.index === state.value?.wagerSeatIndex) ?? null),
+    )
 
     /** Run a reducer transition against the current state; a no-op without a game. */
     function apply(transition: (current: GameState) => GameState): void {
@@ -96,6 +105,8 @@ export const useGameStore = defineStore('game', () => {
         setupError,
         canStart,
         results,
+        wagerRange,
+        wagerSeat,
         openLobby,
         loadBoard,
         reset,
@@ -108,6 +119,9 @@ export const useGameStore = defineStore('game', () => {
         startGame: () => apply(startGame),
         // Play
         openClue: (clueId: string) => apply((current) => openClue(current, clueId)),
+        chooseWagerSeat: (seatIndex: number) =>
+            apply((current) => chooseWagerSeat(current, seatIndex)),
+        setWager: (amount: number) => apply((current) => setWager(current, amount)),
         buzz: (seatIndex: number, at: number = Date.now()) =>
             apply((current) => buzz(current, seatIndex, at)),
         adjudicate: (correct: boolean) => apply((current) => adjudicate(current, correct)),

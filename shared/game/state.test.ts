@@ -3,9 +3,11 @@ import { makeBoard } from './game.fixture'
 import {
     MAX_SEATS,
     MIN_SEATS,
+    MIN_WAGER,
     adjudicate,
     buzz,
     canStartGame,
+    chooseWagerSeat,
     claimSeat,
     closeClue,
     createGameState,
@@ -18,7 +20,9 @@ import {
     seatSetupError,
     setSeatCount,
     setSeatKind,
+    setWager,
     startGame,
+    wagerBounds,
 } from './state'
 import { seatAt, standings } from './selectors'
 import type { GameState } from './types'
@@ -133,6 +137,70 @@ describe('openClue', () => {
 
         const open = openClue(started, 'clue-0-1')
         expect(openClue(open, 'clue-1-0')).toBe(open)
+    })
+})
+
+describe('daily double', () => {
+    /** A started 2-seat game whose `clue-0-1` (200 points) is the Daily Double. */
+    function dailyDoubleGame(): GameState {
+        return startGame(setSeatCount(createGameState(makeBoard(2, 2, 'clue-0-1')), 2))
+    }
+
+    it('goes to the wager phase instead of opening the buzzers', () => {
+        const state = openClue(dailyDoubleGame(), 'clue-0-1')
+
+        expect(state.phase).toBe('dailyDouble')
+        expect(state.wagerSeatIndex).toBeNull()
+        expect(buzz(state, 0, 1_000)).toBe(state)
+    })
+
+    it('bounds the wager by the seat score, never below the clue value', () => {
+        const chosen = chooseWagerSeat(openClue(dailyDoubleGame(), 'clue-0-1'), 0)
+
+        // Seat 0 is on 0 points, so it may still risk the clue's face value.
+        expect(wagerBounds(chosen)).toEqual({ min: MIN_WAGER, max: 200 })
+
+        const rich = adjudicate(buzz(openClue(dailyDoubleGame(), 'clue-0-0'), 0, 1_000), true)
+        const richChosen = chooseWagerSeat(openClue(rich, 'clue-0-1'), 0)
+
+        expect(wagerBounds(richChosen)?.max).toBe(200)
+        expect(wagerBounds(chooseWagerSeat(openClue(rich, 'clue-0-1'), 1))?.max).toBe(200)
+    })
+
+    it('rejects a wager outside the bounds and before a seat is chosen', () => {
+        const open = openClue(dailyDoubleGame(), 'clue-0-1')
+        expect(setWager(open, 100)).toBe(open)
+
+        const chosen = chooseWagerSeat(open, 0)
+        expect(setWager(chosen, MIN_WAGER - 1)).toBe(chosen)
+        expect(setWager(chosen, 201)).toBe(chosen)
+        expect(setWager(chosen, 10.5)).toBe(chosen)
+    })
+
+    it('scores the wager rather than the clue value', () => {
+        const wagered = setWager(chooseWagerSeat(openClue(dailyDoubleGame(), 'clue-0-1'), 0), 150)
+
+        expect(wagered.phase).toBe('buzzed')
+        expect(wagered.activeSeatIndex).toBe(0)
+        expect(seatAt(adjudicate(wagered, true), 0)?.score).toBe(150)
+        expect(seatAt(adjudicate(wagered, false), 0)?.score).toBe(-150)
+    })
+
+    it('belongs to the wagering seat alone: nobody else may buzz or answer', () => {
+        const wagered = setWager(chooseWagerSeat(openClue(dailyDoubleGame(), 'clue-0-1'), 0), 50)
+        expect(buzz(wagered, 1, 900)).toBe(wagered)
+
+        const wrong = adjudicate(wagered, false)
+        expect(wrong.phase).toBe('board')
+        expect(wrong.revealedClueIds).toEqual(['clue-0-1'])
+        expect(wrong.wager).toBeNull()
+    })
+
+    it('can be skipped without scoring, and counts as revealed', () => {
+        const skipped = closeClue(openClue(dailyDoubleGame(), 'clue-0-1'))
+
+        expect(skipped.revealedClueIds).toEqual(['clue-0-1'])
+        expect(standings(skipped).every((entry) => entry.score === 0)).toBe(true)
     })
 })
 

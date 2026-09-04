@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
- * The M1 happy path: pick a board, set up local seats, play a clue and score it.
+ * The hotseat happy paths: pick a board, set up local seats, play clues (including
+ * the Daily Double wager) and finish on the results screen.
  * Requires a seeded database (`pnpm db:seed`).
  */
 
@@ -66,4 +67,46 @@ test('a wrong answer subtracts the value and lets the other seat buzz', async ({
     const scores = page.getByRole('list', { name: 'Scores' })
     await expect(scores.getByText('-200')).toBeVisible()
     await expect(scores.getByText('200', { exact: true })).toBeVisible()
+})
+
+test('a daily double is played by one seat for its wager', async ({ page }) => {
+    await hostFirstBoard(page)
+
+    await page.getByRole('button', { name: 'Start game' }).click()
+
+    // The Daily Double of the seeded starter board (docs: prisma/boards.ts).
+    await page.getByRole('button', { name: 'World Capitals for 400' }).click()
+    await expect(page.getByText('Who found it?')).toBeVisible()
+
+    await page.getByRole('button', { name: /^Player 2/ }).click()
+    await page.getByLabel('Wager').fill('250')
+    await page.getByRole('button', { name: 'Place wager' }).click()
+
+    // No buzzers: the clue is handed straight to the wagering seat.
+    await expect(page.getByText('Player 2 wagered 250.')).toBeVisible()
+    await page.getByRole('button', { name: 'Correct' }).click()
+
+    const scores = page.getByRole('list', { name: 'Scores' })
+    await expect(scores.getByText('250')).toBeVisible()
+})
+
+test('ending the game shows the final standings', async ({ page }) => {
+    await hostFirstBoard(page)
+
+    await page.getByRole('button', { name: 'Start game' }).click()
+    await page
+        .getByRole('button', { name: /for 100$/ })
+        .first()
+        .click()
+    await page.getByRole('button', { name: /^Player 1/ }).click()
+    await page.getByRole('button', { name: 'Correct' }).click()
+
+    await page.getByRole('button', { name: 'End game' }).click()
+
+    await expect(page).toHaveURL(/\/results$/)
+    await expect(page.getByText('Winner: Player 1')).toBeVisible()
+
+    const standings = page.getByRole('list', { name: 'Final standings' })
+    await expect(standings.getByText('1.')).toBeVisible()
+    await expect(standings.getByText('100')).toBeVisible()
 })

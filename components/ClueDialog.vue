@@ -14,6 +14,8 @@ const props = defineProps<{
     seats: readonly Seat[]
     activeSeat: Seat | null
     lockedSeatIndexes: readonly number[]
+    /** Accepted Daily Double wager: it replaces the clue value and closes the buzzers. */
+    wager?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -32,14 +34,16 @@ const buzzers = computed(() =>
 <template>
     <UiModal :open="true" size="xl" :dismissible="false" @close="emit('close')">
         <template #title>
-            <span class="text-muted">{{ clue.value }}</span>
+            <span class="text-muted">{{ wager ?? clue.value }}</span>
             <span v-if="clue.isDailyDouble" class="ml-2 text-primary">Daily Double</span>
         </template>
 
         <p class="text-center text-2xl font-semibold sm:text-3xl">{{ clue.prompt }}</p>
 
         <p v-if="activeSeat" class="mt-6 text-center">
-            <span class="font-semibold">{{ activeSeat.name }}</span> buzzed in.
+            <span class="font-semibold">{{ activeSeat.name }}</span>
+            <template v-if="wager"> wagered {{ wager }}.</template>
+            <template v-else> buzzed in.</template>
             <span class="block text-sm text-muted">Solution: {{ clue.solution }}</span>
         </p>
 

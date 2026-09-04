@@ -28,11 +28,12 @@ export interface Seat {
 /**
  * Where the game currently is.
  *
- * `lobby` → seat setup · `board` → picking a clue · `clue` → clue shown, buzzers open ·
- * `buzzed` → a seat won the buzz, awaiting adjudication · `paused` → host absent ·
- * `done` → every clue revealed.
+ * `lobby` → seat setup · `board` → picking a clue · `dailyDouble` → hidden wager clue,
+ * host picks the seat and its wager before the prompt is shown · `clue` → clue shown,
+ * buzzers open · `buzzed` → a seat is answering, awaiting adjudication ·
+ * `paused` → host absent · `done` → every clue revealed.
  */
-export type GamePhase = 'lobby' | 'board' | 'clue' | 'buzzed' | 'paused' | 'done'
+export type GamePhase = 'lobby' | 'board' | 'dailyDouble' | 'clue' | 'buzzed' | 'paused' | 'done'
 
 /** A single buzz attempt, stamped in server time after latency correction (M3). */
 export interface BuzzEntry {
@@ -55,6 +56,16 @@ export interface GameState {
     readonly activeSeatIndex: number | null
     /** Seats that already answered the current clue wrong and may not buzz again. */
     readonly lockedSeatIndexes: readonly number[]
+    /** Seat playing the open Daily Double, chosen by the host; `null` for normal clues. */
+    readonly wagerSeatIndex: number | null
+    /** Accepted wager for the open Daily Double; scored instead of the clue value. */
+    readonly wager: number | null
+}
+
+/** Inclusive range a Daily Double wager must fall into. */
+export interface WagerBounds {
+    readonly min: number
+    readonly max: number
 }
 
 /** A seat with its final rank, as shown on the results screen. */
