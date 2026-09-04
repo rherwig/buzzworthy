@@ -9,11 +9,11 @@ import { test, expect, type Browser, type Page } from '@playwright/test'
 /** Open an online room for the first seeded board and return its code. */
 async function hostOnlineRoom(page: Page): Promise<string> {
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Jeopardy' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Buzzworthy' })).toBeVisible()
 
     // Retried: a click landing before hydration is silently lost.
     await expect(async () => {
-        await page.getByRole('button', { name: 'Host online' }).first().click()
+        await page.getByRole('button', { name: 'Host', exact: true }).first().click()
         await expect(page.getByRole('heading', { name: 'Lobby' })).toBeVisible({ timeout: 2_000 })
     }).toPass({ timeout: 15_000 })
 

@@ -17,6 +17,8 @@ const code = String(route.params.code).toUpperCase()
 const { connected } = useRoom(code)
 const occupantId = useOccupantId()
 
+useHead({ title: `Join ${code}` })
+
 const name = ref('')
 
 const openSeats = computed(() =>

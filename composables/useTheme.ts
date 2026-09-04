@@ -5,16 +5,17 @@
  * selected via the `data-theme` attribute on <html>. The active choice is
  * stored in a cookie so SSR renders the correct scheme with no flash.
  *
+ * This list is the *offered* set, deliberately shorter than the set of schemes in
+ * the stylesheet: the remaining ones stay there for development only and are not
+ * selectable, so an unknown cookie value falls back to `DEFAULT_THEME`.
+ *
  * Keep presentation logic here (SOLID/DRY) instead of inside components.
  */
 export const THEMES = [
     { id: 'light', label: 'Light' },
     { id: 'dark', label: 'Dark' },
-    { id: 'midnight', label: 'Midnight (Green)' },
+    { id: 'midnight', label: 'Midnight' },
     { id: 'ocean', label: 'Ocean' },
-    { id: 'forest', label: 'Forest' },
-    { id: 'sunset', label: 'Sunset' },
-    { id: 'grape', label: 'Grape' },
 ] as const
 
 export type ThemeId = (typeof THEMES)[number]['id']

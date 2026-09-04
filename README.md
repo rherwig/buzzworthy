@@ -1,8 +1,12 @@
-# AI Boilerplate
+# Buzzworthy
 
-A modular, enterprise-ready **Nuxt 3 + TypeScript** web-project template, designed to be
-safe for AI agents to maintain. See [`docs/STACK.md`](docs/STACK.md) for the full decision
-record and [`AGENTS.md`](AGENTS.md) for agent/contributor guidance.
+_Answer first. Question later._
+
+A quiz-night game on a category board: local players share one screen, remote players join by
+room code and buzz in from their own device. Built on a modular, enterprise-ready
+**Nuxt 3 + TypeScript** foundation designed to be safe for AI agents to maintain — see
+[`docs/JEOPARDY.md`](docs/JEOPARDY.md) for the product plan, [`docs/STACK.md`](docs/STACK.md)
+for the full decision record and [`AGENTS.md`](AGENTS.md) for agent/contributor guidance.
 
 ## Stack
 
@@ -28,15 +32,19 @@ pnpm install
 # 2. Set up env + database (SQLite by default)
 cp .env.example .env
 pnpm db:migrate     # create/apply migrations
-pnpm db:seed        # load the sample Jeopardy boards
+pnpm db:seed        # load the sample boards
 
 # 3. Run the dev server
 pnpm dev            # http://localhost:3000
 ```
 
-On the start page a board can be hosted as a **local hotseat** game or as an **online room**,
-which hands out a room code and a join link (`/join/<code>`) for players on their own devices.
-See [`docs/JEOPARDY.md`](docs/JEOPARDY.md) for the product and technical plan.
+On the start page, **Host** opens a room for the chosen board and hands out a room code plus a
+join link (`/join/<code>`). Each seat is then set to **Local**, **Open** or **Closed** in the
+lobby: local seats share the host's screen, open seats are claimed by players on their own
+device. An all-local game just never hands out its code.
+
+The colour scheme is picked in the header. Only the schemes listed in `composables/useTheme.ts`
+are offered; `assets/css/tailwind.css` holds a few more as a development palette.
 
 ## Scripts
 

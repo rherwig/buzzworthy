@@ -1,13 +1,18 @@
-# Jeopardy-style Quiz App — Product & Technical Plan
+# Buzzworthy — Product & Technical Plan
 
 > Status: **Proposed** · Last updated: 2026-09-04
 >
-> This document is the source of truth for the Jeopardy-style quiz app built on top of
+> This document is the source of truth for **Buzzworthy**, the Jeopardy-style quiz app built on top of
 > this Nuxt 3 template. It records the product requirements, the open questions raised
 > during planning, the assumptions taken to keep momentum, the technical design (mapped
 > onto [`STACK.md`](./STACK.md)), the data model, and the delivery milestones.
 
 ## 1. Product vision
+
+The product is called **Buzzworthy** ("Answer first. Question later."): the game is
+Jeopardy-shaped but not a clone, so it carries its own name rather than a trademark. That name,
+its tagline and its description live in `shared/branding.ts`; `app.vue` builds every document
+title and social preview from them and each page contributes only its own name.
 
 A web app that recreates the classic **Jeopardy!** experience: a grid of categories with
 increasing point values, clickable clues, a wagering twist (Daily Double),
@@ -203,7 +208,11 @@ out of components (per template conventions).
   "waiting for host". The host token allows reclaiming the role on reconnect; the room is
   discarded after the inactivity timeout.
 - **Mixed seats:** the reducer does not care whether a seat is local or online — only the
-  _input path_ differs. That keeps hotseat-only games working with no server round trips.
+  _input path_ differs. The client keeps a local-only path (the store can run the reducer in the
+  browser) but the UI no longer offers it: **hosting is a single action** that always opens a
+  room, so a game is never forced to decide up front whether anyone will play remotely. An
+  all-`Local` game simply never hands out its code, and a seat can be opened at any point in the
+  lobby. The upside is one code path, one set of pages, and a room that survives a host reload.
 
 ## 8. Milestones
 
@@ -244,7 +253,19 @@ out of components (per template conventions).
    announcement, focus-visible rings, height-capped scrollable dialogs); Vitest coverage for
    `ScoreBoard`, `GameBoard`, the buzz window and the §6 invariant list.
    Deliberately not built: a per-clue countdown/timer — the host calls time by voice.
-6. **M5+ (deferred):** board authoring UI (Q2), result persistence (Q4), spectators & chat.
+6. **M5 — Product polish — ✅ done:** the template chrome became the product's — `shared/branding.ts`
+   as the single source of the name, a title template in `app.vue` plus OG/Twitter metadata, a
+   per-page title on every screen, and a slim header holding just the wordmark (which links home)
+   and the theme switch; the stack tagline and the unused `useApiStatus` leftover are gone. The
+   theme switch offers **Light, Dark, Midnight and Ocean** only — the other schemes stay in
+   `assets/css/tailwind.css` as a development palette and are deliberately not selectable, so an
+   unknown cookie value falls back to the default.
+7. **M6 — One hosting action — ✅ done:** the board picker's `Host` / `Host online` pair became a
+   single `Host` button. Every game is now a server-authoritative room (`/lobby/:code`), and
+   whether a seat is local or remote is decided per seat in the lobby, which is where that choice
+   belongs — a purely local game just ignores its code (§7 "Mixed seats").
+8. **Not planned:** a board authoring UI (Q2 keeps seeded content), result persistence (Q4),
+   spectators & chat.
 
 ## 9. Definition of done (MVP)
 

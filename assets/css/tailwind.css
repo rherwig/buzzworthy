@@ -58,6 +58,11 @@
         --color-primary-foreground: 255 255 255; /* white */
     }
 
+    /*
+     * Not offered in the UI. `useTheme` lists only the selectable schemes; these stay
+     * here as a palette to develop against — set `data-theme` on <html> by hand to
+     * preview one. Do not add them back to `THEMES` without a product decision.
+     */
     [data-theme='forest'] {
         --color-background: 240 253 244; /* green-50 */
         --color-surface: 255 255 255; /* white */

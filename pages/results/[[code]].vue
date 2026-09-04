@@ -13,6 +13,8 @@ const game = useGameStore()
 const router = useRouter()
 const { online, link } = useRoomPage()
 
+useHead({ title: 'Final standings' })
+
 const winners = computed(() => game.results.filter((entry) => entry.rank === 1))
 
 onMounted(() => {

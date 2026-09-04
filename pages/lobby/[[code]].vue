@@ -13,6 +13,8 @@ const game = useGameStore()
 const router = useRouter()
 const { code, online, link } = useRoomPage()
 
+useHead({ title: code === null ? 'Lobby' : `Lobby ${code}` })
+
 const seatKinds: { value: SeatKind; label: string }[] = [
     { value: 'local', label: 'Local' },
     { value: 'open', label: 'Open' },

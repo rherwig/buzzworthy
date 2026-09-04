@@ -7,41 +7,48 @@ import {
     roomCodeSchema,
 } from '~~/shared/game'
 import { gameSummaryListSchema, type GameSummary } from '~~/shared/types/game'
+import { APP_NAME, APP_TAGLINE } from '~~/shared/branding'
 import { UiButton } from '~/shared/ui'
 
 /**
  * Board picker and front door.
  *
- * A board can be hosted locally (hotseat, everything stays in this browser) or as an
- * online room, which asks the server for a code and a join link (docs/JEOPARDY.md §7).
- * Players arrive here too, with a code in hand.
+ * Hosting is one action: every game is a server-authoritative room with a code and a
+ * join link (docs/JEOPARDY.md §7). Whether it is a pure hotseat, a purely remote game
+ * or a mix is decided per seat in the lobby, not here — a game with no `Open` seat
+ * simply never uses its code. Players arrive here too, with a code in hand.
  */
 const { data: boards, error } = await useFetch('/api/games', {
     transform: (payload): GameSummary[] => gameSummaryListSchema.parse(payload),
 })
 
-const game = useGameStore()
+// The front door carries the product name, so it is the one page without its own title.
+useHead({ title: '' })
 
 const joinCode = ref('')
 const joinError = ref<string | null>(null)
 
-async function hostLocal(id: string): Promise<void> {
-    await game.loadBoard(id)
+const hosting = ref(false)
+const hostError = ref<string | null>(null)
 
-    if (game.state !== null) {
-        await navigateTo(roomRoute('lobby'))
+async function host(id: string): Promise<void> {
+    hosting.value = true
+    hostError.value = null
+
+    try {
+        const room = createRoomResultSchema.parse(
+            await $fetch('/api/rooms', { method: 'POST', body: { gameId: id } }),
+        )
+
+        // The token is the host's only claim to the room, including after a reload (Q1e).
+        rememberHostToken(room.code, room.hostToken)
+
+        await navigateTo(roomRoute('lobby', room.code))
+    } catch {
+        hostError.value = 'Could not open a room. Is the server running?'
+    } finally {
+        hosting.value = false
     }
-}
-
-async function hostOnline(id: string): Promise<void> {
-    const room = createRoomResultSchema.parse(
-        await $fetch('/api/rooms', { method: 'POST', body: { gameId: id } }),
-    )
-
-    // The token is the host's only claim to the room, including after a reload (Q1e).
-    rememberHostToken(room.code, room.hostToken)
-
-    await navigateTo(roomRoute('lobby', room.code))
 }
 
 async function join(): Promise<void> {
@@ -61,10 +68,11 @@ async function join(): Promise<void> {
 <template>
     <div class="space-y-8">
         <div>
-            <h1 class="text-3xl font-bold">Jeopardy</h1>
-            <p class="mt-2 text-muted">
-                Pick a board, set up the seats and play. Local players share this screen; online
-                seats join from their own device.
+            <h1 class="text-3xl font-bold">{{ APP_NAME }}</h1>
+            <p class="mt-1 text-lg text-muted">{{ APP_TAGLINE }}</p>
+            <p class="mt-3 text-muted">
+                Pick a board, then set up the seats. Local players share this screen; open a seat
+                and hand out the room code, and that player joins from their own device.
             </p>
         </div>
 
@@ -100,15 +108,10 @@ async function join(): Promise<void> {
                         {{ board.categoryCount }} categories · {{ board.clueCount }} clues
                     </p>
                 </div>
-                <div class="flex gap-2">
-                    <UiButton :disabled="game.loading" @click="hostLocal(board.id)">Host</UiButton>
-                    <UiButton variant="secondary" @click="hostOnline(board.id)">
-                        Host online
-                    </UiButton>
-                </div>
+                <UiButton :disabled="hosting" @click="host(board.id)">Host</UiButton>
             </li>
         </ul>
 
-        <p v-if="game.error" class="text-sm text-muted">{{ game.error }}</p>
+        <p v-if="hostError" class="text-sm text-muted">{{ hostError }}</p>
     </div>
 </template>

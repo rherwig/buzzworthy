@@ -14,6 +14,8 @@ const game = useGameStore()
 const router = useRouter()
 const { code, online, link } = useRoomPage()
 
+useHead({ title: () => game.board?.title ?? 'Game' })
+
 const isHost = computed(() => !online || game.isHost)
 const boardDisabled = computed(() => game.phase !== 'board' || !isHost.value)
 

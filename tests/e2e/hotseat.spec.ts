@@ -3,6 +3,9 @@ import { test, expect, type Page } from '@playwright/test'
 /**
  * The hotseat happy paths: pick a board, set up local seats, play clues (including
  * the Daily Double wager) and finish on the results screen.
+ *
+ * Hosting always opens a room, so even an all-local game runs through the server; the
+ * seats here simply stay `Local` and nobody joins from another device.
  * Requires a seeded database (`pnpm db:seed`).
  */
 
@@ -14,7 +17,7 @@ import { test, expect, type Page } from '@playwright/test'
  */
 async function hostFirstBoard(page: Page) {
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Jeopardy' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Buzzworthy' })).toBeVisible()
 
     await expect(async () => {
         await page.getByRole('button', { name: 'Host', exact: true }).first().click()
@@ -105,7 +108,7 @@ test('ending the game shows the final standings', async ({ page }) => {
 
     await page.getByRole('button', { name: 'End game' }).click()
 
-    await expect(page).toHaveURL(/\/results$/)
+    await expect(page).toHaveURL(/\/results\/[A-Z0-9]+$/)
     await expect(page.getByText('Winner: Player 1')).toBeVisible()
 
     const standings = page.getByRole('list', { name: 'Final standings' })
