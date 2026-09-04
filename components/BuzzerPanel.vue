@@ -13,12 +13,17 @@ import { UiModal } from '~/shared/ui'
  * next authoritative state overrides it.
  *
  * Answers are spoken out loud (docs/JEOPARDY.md Q1f), so there is no answer input.
+ *
+ * The scores travel into the dialog for the same reason as in `ClueDialog`: a modal hides
+ * the page behind it from assistive tech.
  */
 const props = defineProps<{
     clue: StateClue
     /** Seat this device plays; `null` for a spectator, who only watches. */
     seat: Seat | null
     activeSeat: Seat | null
+    /** All seats, so the scores stay reachable while the modal hides the page behind it. */
+    seats?: readonly Seat[]
     /** This seat already answered wrong on this clue and may not buzz again. */
     locked?: boolean
     /** Accepted Daily Double wager: it replaces the clue value and closes the buzzers. */
@@ -120,7 +125,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             <span v-if="clue.isDailyDouble" class="ml-2 text-primary">Daily Double</span>
         </template>
 
-        <p class="text-center text-2xl font-semibold sm:text-3xl">{{ clue.prompt }}</p>
+        <p class="text-center text-xl font-semibold sm:text-3xl">{{ clue.prompt }}</p>
 
         <p v-if="status === 'watching'" class="mt-8 text-center text-sm text-muted">
             You are watching this game.
@@ -139,11 +144,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 {{ label }}
             </button>
 
-            <p class="mt-3 text-center text-xs text-muted">
+            <p class="mt-3 text-center text-xs text-muted" aria-live="polite">
                 <template v-if="ready">Space or Enter buzzes too.</template>
                 <template v-else-if="status === 'locked'">Wait for the next clue.</template>
                 <template v-else-if="status === 'pressed'">Waiting for the host…</template>
             </p>
         </div>
+
+        <ScoreBoard
+            v-if="seats"
+            class="mt-8"
+            compact
+            :seats="seats"
+            :active-seat-index="activeSeat?.index"
+        />
     </UiModal>
 </template>

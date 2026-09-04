@@ -34,7 +34,11 @@ test('a host plays a clue in a local hotseat game', async ({ page }) => {
     await expect(scores.getByText('0').first()).toBeVisible()
 
     const firstClue = page.getByRole('button', { name: /for 100$/ }).first()
+    const clueLabel = await firstClue.getAttribute('aria-label')
     await firstClue.click()
+
+    // The scores travel into the clue dialog, which hides the page behind it (M4).
+    await expect(scores).toBeVisible()
 
     // Buzz for the first local seat and mark the spoken answer correct.
     await page.getByRole('button', { name: /^Ada/ }).click()
@@ -42,7 +46,7 @@ test('a host plays a clue in a local hotseat game', async ({ page }) => {
     await page.getByRole('button', { name: 'Correct' }).click()
 
     await expect(scores.getByText('100')).toBeVisible()
-    await expect(firstClue).toBeDisabled()
+    await expect(page.getByRole('button', { name: `${clueLabel}, already played` })).toBeDisabled()
 })
 
 test('a wrong answer subtracts the value and lets the other seat buzz', async ({ page }) => {
@@ -62,8 +66,6 @@ test('a wrong answer subtracts the value and lets the other seat buzz', async ({
     await page.getByRole('button', { name: /^Player 2/ }).click()
     await page.getByRole('button', { name: 'Correct' }).click()
 
-    // The dialog hides the page from assistive tech while it is open, so the
-    // scores are only asserted once the clue has been closed.
     const scores = page.getByRole('list', { name: 'Scores' })
     await expect(scores.getByText('-200')).toBeVisible()
     await expect(scores.getByText('200', { exact: true })).toBeVisible()

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { makeBoard } from './game.fixture'
 import {
+    BUZZ_WINDOW_MS,
+    buzzWindowEnd,
     MAX_SEATS,
     MIN_SEATS,
     MIN_WAGER,
@@ -68,6 +70,7 @@ describe('lobby', () => {
         expect(seatAt(state, 0)?.name).toBeNull()
         expect(seatSetupError(state)).toBe('Every local seat needs a name.')
         expect(canStartGame(state)).toBe(false)
+        expect(startGame(state)).toBe(state)
     })
 
     it('requires at least two occupied seats', () => {
@@ -233,6 +236,74 @@ describe('buzz', () => {
             'clue-0-0',
         )
         expect(buzz(withClosed, 2, 1_000)).toBe(withClosed)
+    })
+
+    it('allows a second seat to buzz in the buzzed phase if it is inside the window', () => {
+        const first = buzz(openClue(startedGame(), 'clue-0-0'), 0, 1_000)
+        const second = buzz(first, 1, 1_100)
+
+        expect(second.phase).toBe('buzzed')
+        expect(second.buzzOrder).toHaveLength(2)
+        expect(second.activeSeatIndex).toBe(0)
+    })
+
+    it('hands the clue to the next seat that buzzed inside the window after a wrong answer', () => {
+        const first = buzz(openClue(startedGame(), 'clue-0-0'), 0, 1_000)
+        const second = buzz(first, 1, 1_100)
+        const wrong = adjudicate(second, false)
+
+        // Seat 1 spent its one buzz inside the window, so it must not need a second one.
+        expect(wrong.phase).toBe('buzzed')
+        expect(wrong.activeSeatIndex).toBe(1)
+        expect(wrong.buzzOrder).toHaveLength(1)
+        expect(wrong.buzzOrder[0]?.seatIndex).toBe(1)
+        expect(wrong.lockedSeatIndexes).toEqual([0])
+    })
+
+    describe('buzz window', () => {
+        it('is null when nobody has buzzed yet', () => {
+            const open = openClue(startedGame(), 'clue-0-0')
+            expect(buzzWindowEnd(open)).toBeNull()
+        })
+
+        it('opens with the first buzz and rejects buzzes beyond the duration', () => {
+            const firstAt = 1_000
+            const state = buzz(openClue(startedGame(), 'clue-0-0'), 0, firstAt)
+
+            expect(buzzWindowEnd(state)).toBe(firstAt + BUZZ_WINDOW_MS)
+
+            // Exactly at boundary is accepted
+            const boundary = buzz(state, 1, firstAt + BUZZ_WINDOW_MS)
+            expect(boundary.buzzOrder).toHaveLength(2)
+
+            // Beyond boundary is ignored
+            const late = buzz(state, 1, firstAt + BUZZ_WINDOW_MS + 1)
+            expect(late).toBe(state)
+        })
+
+        it('awards the clue to an earlier stamp arriving late inside the window', () => {
+            const open = openClue(startedGame(), 'clue-0-0')
+            // Seat 0 recorded first at T=1500
+            const state = buzz(open, 0, 1_500)
+            // Seat 1 buzzed at T=1300 but arrived later; it is inside [1500, 1750] so it wins
+            const winningLate = buzz(state, 1, 1_300)
+
+            expect(winningLate.activeSeatIndex).toBe(1)
+            expect(winningLate.buzzOrder[0]?.seatIndex).toBe(1)
+        })
+
+        it('implements the §9 criterion: 200 ms network delay does not cost a seat the buzz', () => {
+            const open = openClue(startedGame(), 'clue-0-0')
+
+            // Seat 0 (local) buzzes at T=500, recorded at T=500
+            const state = buzz(open, 0, 500)
+
+            // Seat 1 (remote) buzzed at T=400, but due to 200 ms lag it arrives at T=600
+            // The window ends at 500 + 250 = 750, so T=400 is accepted and wins
+            const withRemote = buzz(state, 1, 400)
+
+            expect(withRemote.activeSeatIndex).toBe(1)
+        })
     })
 })
 

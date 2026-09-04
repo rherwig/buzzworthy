@@ -20,6 +20,16 @@ export const MIN_OCCUPIED_SEATS = 2
 /** Smallest Daily Double wager (docs/JEOPARDY.md §6). */
 export const MIN_WAGER = 5
 
+/**
+ * How long, in corrected milliseconds, buzzes keep being collected after the first one
+ * (docs/JEOPARDY.md §7).
+ *
+ * A buzz that travelled slowly may arrive after the host already sees a seat highlighted,
+ * and it still wins if it was stamped earlier — but only within this window. Without a
+ * bound the clue would stay stealable until adjudication; with one, the order settles.
+ */
+export const BUZZ_WINDOW_MS = 250
+
 function makeSeat(index: number, kind: SeatKind = 'local'): Seat {
     return {
         index,
@@ -263,10 +273,22 @@ export function setWager(state: GameState, amount: number): GameState {
 }
 
 /**
+ * The instant after which buzzes for the current clue are no longer collected, or `null`
+ * while nobody has buzzed yet. Expressed in corrected time, so it is independent of when
+ * a message happens to arrive — the reducer stays pure and testable.
+ */
+export function buzzWindowEnd(state: GameState): number | null {
+    const first = state.buzzOrder[0]
+
+    return first === undefined ? null : first.at + BUZZ_WINDOW_MS
+}
+
+/**
  * Record a buzz. `atCorrected` is a timestamp **already translated into server time**;
  * latency compensation belongs to the transport layer (docs/JEOPARDY.md §7), which keeps
  * this reducer deterministic. The seat with the smallest corrected timestamp wins, so a
- * buzz that arrives late but was stamped earlier still takes the clue.
+ * buzz that arrives late but was stamped earlier still takes the clue — as long as it falls
+ * inside the `BUZZ_WINDOW_MS` collection window that opens with the first buzz.
  */
 export function buzz(state: GameState, seatIndex: number, atCorrected: number): GameState {
     if (!canSeatBuzz(state, seatIndex)) {
@@ -274,6 +296,12 @@ export function buzz(state: GameState, seatIndex: number, atCorrected: number): 
     }
 
     if (state.buzzOrder.some((entry) => entry.seatIndex === seatIndex)) {
+        return state
+    }
+
+    const windowEnd = buzzWindowEnd(state)
+
+    if (windowEnd !== null && atCorrected > windowEnd) {
         return state
     }
 
@@ -291,7 +319,8 @@ export function buzz(state: GameState, seatIndex: number, atCorrected: number): 
 
 /**
  * Score the buzzed seat. A correct answer closes the clue; a wrong one subtracts the
- * value, locks that seat out of this clue and reopens the buzzers for everyone else.
+ * value, locks that seat out of this clue and hands over to the next seat that already
+ * buzzed inside the collection window — or, if nobody else did, reopens the buzzers.
  */
 export function adjudicate(state: GameState, correct: boolean): GameState {
     const clue = state.currentClueId === null ? null : findClue(state.board, state.currentClueId)
@@ -310,12 +339,21 @@ export function adjudicate(state: GameState, correct: boolean): GameState {
         return closeClue(scored)
     }
 
+    const buzzOrder = scored.buzzOrder.filter((entry) => entry.seatIndex !== seatIndex)
+    // Somebody else already buzzed inside the window: the clue is theirs, in stamped
+    // order. Without this they could never answer, having spent their one buzz.
+    const next = buzzOrder[0]
+
     const reopened: GameState = {
         ...scored,
-        phase: 'clue',
-        activeSeatIndex: null,
-        buzzOrder: scored.buzzOrder.filter((entry) => entry.seatIndex !== seatIndex),
+        phase: next === undefined ? 'clue' : 'buzzed',
+        activeSeatIndex: next?.seatIndex ?? null,
+        buzzOrder,
         lockedSeatIndexes: [...scored.lockedSeatIndexes, seatIndex],
+    }
+
+    if (next !== undefined) {
+        return reopened
     }
 
     const anyoneLeft = occupiedSeats(reopened).some((seat) => canSeatBuzz(reopened, seat.index))

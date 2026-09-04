@@ -9,6 +9,9 @@ import { UiButton, UiModal } from '~/shared/ui'
  * Answers are spoken out loud (docs/JEOPARDY.md Q1f), so there is no answer input.
  * This is the host view only: a player device gets `BuzzerPanel` instead, so the two
  * roles no longer share one template.
+ *
+ * The scores are repeated inside the dialog: a modal hides the page behind it from
+ * assistive tech, so the board's scoreboard is unreachable while a clue is open.
  */
 const props = defineProps<{
     clue: StateClue
@@ -41,9 +44,9 @@ const buzzers = computed(() =>
             <span v-if="clue.isDailyDouble" class="ml-2 text-primary">Daily Double</span>
         </template>
 
-        <p class="text-center text-2xl font-semibold sm:text-3xl">{{ clue.prompt }}</p>
+        <p class="text-center text-xl font-semibold sm:text-3xl">{{ clue.prompt }}</p>
 
-        <p v-if="activeSeat" class="mt-6 text-center">
+        <p v-if="activeSeat" class="mt-6 text-center" aria-live="polite">
             <span class="font-semibold">{{ activeSeat.name }}</span>
             <template v-if="wager"> wagered {{ wager }}.</template>
             <template v-else> buzzed in.</template>
@@ -65,6 +68,8 @@ const buzzers = computed(() =>
                 >
             </UiButton>
         </div>
+
+        <ScoreBoard class="mt-8" compact :seats="seats" :active-seat-index="activeSeat?.index" />
 
         <template #footer>
             <template v-if="activeSeat">

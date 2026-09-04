@@ -156,7 +156,11 @@ out of components (per template conventions).
   still play. The prompt is only revealed once the wager is accepted; the clue then belongs to
   that seat alone (no buzzing) and is scored at the wager, right or wrong.
 - `buzz` takes an **already-corrected** timestamp; latency compensation lives in the transport
-  layer, keeping the reducer pure and deterministic in tests.
+  layer, keeping the reducer pure and deterministic in tests. The first buzz opens a
+  `BUZZ_WINDOW_MS` collection window (`buzzWindowEnd`); buzzes stamped after it are ignored, so
+  the order settles without a timer. A wrong answer then hands the clue to the **next seat that
+  already buzzed** inside that window — it spent its one buzz and must not have to buzz again —
+  and only reopens the buzzers when the collected order is exhausted.
 - **Invariants to test:** game cannot start with fewer than 2 occupied seats or an unnamed
   local seat; an `open` seat can be claimed by exactly one occupant; buzz is ignored unless
   `phase === 'clue'` and locks after the first accepted buzz; the winning buzz is the smallest
@@ -177,8 +181,11 @@ out of components (per template conventions).
   so a refresh or dropped connection **reconnects into the same seat**.
 - **Buzzing (latency-compensated):** the server keeps a rolling clock-offset estimate per
   connection from periodic ping/pong. A client sends `buzz` with its **local** timestamp; the
-  server converts it to server time using that offset, collects buzzes for a short window after
-  the first one, and awards the clue to the smallest corrected timestamp. Corrections are clamped
+  server converts it to server time using that offset, collects buzzes for `BUZZ_WINDOW_MS`
+  (250 ms) of **corrected** time after the first one, and awards the clue to the smallest
+  corrected timestamp. That window lives in the reducer rather than in a transport timer, so it
+  depends only on the timestamps and stays deterministic in tests: inside it a slow but earlier
+  buzz still takes the clue, after it a buzz is ignored. Corrections are clamped
   to a sane bound so a hostile client cannot claim to have buzzed in the past. Local seats are
   buzzed by the host client via per-seat keys (e.g. `1`–`6`) with a zero offset, over the same
   message type.
@@ -211,8 +218,7 @@ out of components (per template conventions).
    names, `Local`/`Open`/`Closed`), `/play` board grid + clue dialog (`UiModal`), host adjudication,
    live scoreboard, number-key buzzing for local seats and final standings; Playwright hotseat spec.
    Known limits carried into later milestones: the game lives in memory only (a refresh returns to
-   the board picker), `Open` seats cannot be claimed until M3, and the scoreboard is hidden behind
-   the clue dialog while a clue is open.
+   the board picker) and `Open` seats cannot be claimed until M3.
 3. **M2 — Twists — ✅ done:** Daily Double wager flow (`dailyDouble` phase, `chooseWagerSeat` /
    `setWager` / `wagerBounds` in the reducer, `DailyDoubleDialog`) and a `/results` screen
    (`StandingsList`, winner/tie line) the game hands over to when the board is exhausted or the
@@ -228,15 +234,16 @@ out of components (per template conventions).
    that either runs the reducer locally (hotseat) or sends the equivalent message, so one set of
    pages serves hotseat host, online host and remote player. Playwright multi-context specs cover
    a remote seat claim + buzz + scoring and the host-disconnect pause/resume.
-   Known limits: buzzes are accepted for as long as the clue is open, so a late-arriving but
-   earlier-stamped buzz can still take it (no fixed collection window yet), and rooms live in the
-   memory of a single server instance.
-5. **M4 — Polish & tests:** `shared/ui` components + Storybook stories; Vitest coverage of
-   scoring/wager/seat/buzz-ordering invariants; a11y & responsive pass.
-   Done so far: the player-device buzzer (`components/BuzzerPanel.vue`, unit-tested, asserted in
-   the online Playwright spec), which replaced the host clue dialog filtered down to one seat.
-   Still open: a per-clue countdown/timer, the scoreboard being hidden behind the open clue
-   dialog, and the wider a11y/responsive pass.
+   Known limit: rooms live in the memory of a single server instance.
+5. **M4 — Polish & tests — ✅ done:** the player-device buzzer (`components/BuzzerPanel.vue`)
+   replaced the host clue dialog filtered down to one seat; the buzz **collection window**
+   (`BUZZ_WINDOW_MS` / `buzzWindowEnd` in the reducer) closed the last M3 fairness gap; the
+   scoreboard now travels **into** the open-clue dialog in a `compact` form, because a modal hides
+   the page behind it from assistive tech; a11y & responsive pass (side-scrolling board grid with
+   a readable minimum width, "already played" in played-clue labels, `aria-live` on the buzz
+   announcement, focus-visible rings, height-capped scrollable dialogs); Vitest coverage for
+   `ScoreBoard`, `GameBoard`, the buzz window and the §6 invariant list.
+   Deliberately not built: a per-clue countdown/timer — the host calls time by voice.
 6. **M5+ (deferred):** board authoring UI (Q2), result persistence (Q4), spectators & chat.
 
 ## 9. Definition of done (MVP)
@@ -248,7 +255,8 @@ out of components (per template conventions).
   their seat.
 - A game with a mix of local and online seats plays a full board end-to-end.
 - Two seats buzzing at the same corrected instant resolve deterministically, and a simulated
-  200 ms delay on a remote seat does not by itself cost it the buzz (unit-tested).
+  200 ms delay on a remote seat does not by itself cost it the buzz (unit-tested); buzzes stop
+  being collected `BUZZ_WINDOW_MS` after the first one.
 - Closing the host tab pauses the room; reopening it with the host token resumes it in place.
 - Daily Double wagers work and respect score bounds.
 - Scores are correct throughout; results screen shows final standings.

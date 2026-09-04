@@ -119,6 +119,7 @@ const ownSeatLocked = computed(
                 v-else
                 :clue="game.clue"
                 :seat="game.mySeat"
+                :seats="game.seats"
                 :active-seat="game.activeSeat"
                 :locked="ownSeatLocked"
                 :wager="game.state.wager"

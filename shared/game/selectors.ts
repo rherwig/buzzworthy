@@ -56,9 +56,10 @@ export function seatAt(state: GameState, index: number): Seat | null {
 /**
  * Whether a seat is allowed to buzz on the current clue.
  *
- * `buzzed` counts as open too: while the host has not adjudicated yet, a buzz that
- * travelled slowly may still arrive and win on its corrected timestamp. Closing that
- * collection window is the transport layer's job (docs/JEOPARDY.md §7).
+ * `buzzed` counts as open too: a buzz that travelled slowly may still arrive and win on
+ * its corrected timestamp. How long that stays possible is bounded by the collection
+ * window in `buzz` itself (`BUZZ_WINDOW_MS`), which needs the timestamp this query has
+ * no access to — so a seat eligible here can still be turned away as too late.
  *
  * A Daily Double is never buzzable: it belongs to the seat that wagered on it.
  */
