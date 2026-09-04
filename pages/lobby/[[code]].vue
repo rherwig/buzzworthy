@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { MAX_SEATS, MIN_SEATS, type SeatKind } from '~~/shared/game'
+import { MAX_SEATS, MIN_SEATS, joinPath, type SeatKind } from '~~/shared/game'
 import { UiButton } from '~/shared/ui'
 
 /**
  * Seat setup, RTS-lobby style: every seat is `Local`, `Open` or `Closed`.
- * `Open` seats can already be configured, but nobody can claim one until the
- * realtime room lands in M3 — the reducer refuses to start such a lobby.
+ *
+ * The same screen serves a hotseat game (`/lobby`) and an online room
+ * (`/lobby/ACDEF`); in the latter case the host also gets the room code and the join
+ * link to hand out, and seats fill up as players claim them (docs/JEOPARDY.md §7).
  */
 const game = useGameStore()
 const router = useRouter()
+const { code, online, link } = useRoomPage()
 
 const seatKinds: { value: SeatKind; label: string }[] = [
     { value: 'local', label: 'Local' },
@@ -16,18 +19,33 @@ const seatKinds: { value: SeatKind; label: string }[] = [
     { value: 'closed', label: 'Closed' },
 ]
 
-// The lobby only exists in memory, so a direct visit or a refresh has nothing to show.
+const inviteLink = computed(() =>
+    code === null || !import.meta.client ? null : `${window.location.origin}${joinPath(code)}`,
+)
+
+// A local lobby only exists in memory, so a direct visit or a refresh has nothing to
+// show. An online lobby is fetched over the socket instead.
 onMounted(() => {
-    if (game.state === null) {
+    if (!online && game.state === null) {
         void router.replace('/')
     }
 })
 
+// Online, the host does not decide when the screen changes — the server does.
+watch(
+    () => game.phase,
+    (phase) => {
+        if (phase !== null && phase !== 'lobby') {
+            void router.push(link('play'))
+        }
+    },
+)
+
 function start(): void {
     game.startGame()
 
-    if (game.phase !== 'lobby') {
-        void router.push('/play')
+    if (!online && game.phase !== 'lobby') {
+        void router.push(link('play'))
     }
 }
 </script>
@@ -37,6 +55,14 @@ function start(): void {
         <div>
             <h1 class="text-3xl font-bold">Lobby</h1>
             <p class="mt-2 text-muted">{{ game.board?.title }}</p>
+        </div>
+
+        <div v-if="code" class="rounded-lg border border-border bg-surface p-4">
+            <p class="text-sm text-muted">Room code</p>
+            <p class="text-2xl font-bold tracking-widest" data-testid="room-code">{{ code }}</p>
+            <p v-if="inviteLink" class="mt-2 break-all text-sm text-muted">
+                Join link: <span data-testid="join-link">{{ inviteLink }}</span>
+            </p>
         </div>
 
         <div class="flex items-center gap-3">
@@ -79,6 +105,15 @@ function start(): void {
                         @click="game.setSeatKind(seat.index, kind.value)"
                     >
                         {{ kind.label }}
+                    </UiButton>
+                    <UiButton
+                        v-if="seat.occupantId"
+                        size="sm"
+                        variant="ghost"
+                        :aria-label="`Kick seat ${seat.index + 1}`"
+                        @click="game.kickSeat(seat.index)"
+                    >
+                        Kick
                     </UiButton>
                 </div>
             </li>

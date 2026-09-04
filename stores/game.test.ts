@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
+import { createGameState, startGame, toRoomView, type ClientMessage } from '~~/shared/game'
 import { makeBoard } from '~~/shared/game/game.fixture'
 import { useGameStore } from './game'
 
@@ -95,6 +96,34 @@ describe('game store', () => {
         store.setWager(75)
         store.adjudicate(true)
         expect(store.results[0]).toMatchObject({ name: 'Player 2', score: 75 })
+    })
+
+    it('sends actions over the wire instead of applying them once online', () => {
+        const store = useGameStore()
+        const sent: ClientMessage[] = []
+
+        store.openLobby(makeBoard(), 2)
+        store.attach('ACDEF', { send: (message) => sent.push(message) })
+
+        store.startGame()
+        store.buzz(1, 1_000)
+
+        // The server is the only authority online: nothing changed locally.
+        expect(store.phase).toBe('lobby')
+        expect(sent).toEqual([{ type: 'startGame' }, { type: 'buzz', seatIndex: 1, at: 1_000 }])
+    })
+
+    it('replaces its state with the room snapshot it receives', () => {
+        const store = useGameStore()
+        const view = toRoomView(startGame(createGameState(makeBoard(), 2)), 'player', 'occupant-1')
+
+        store.receive(view, 'player', 1)
+
+        expect(store.phase).toBe('board')
+        expect(store.isHost).toBe(false)
+        expect(store.mySeat?.index).toBe(1)
+        // A player device never receives the solutions.
+        expect(store.board?.categories[0]?.clues[0]).not.toHaveProperty('solution')
     })
 
     it('clears everything on reset', () => {

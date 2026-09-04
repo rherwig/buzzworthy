@@ -34,6 +34,10 @@ pnpm db:seed        # load the sample Jeopardy boards
 pnpm dev            # http://localhost:3000
 ```
 
+On the start page a board can be hosted as a **local hotseat** game or as an **online room**,
+which hands out a room code and a join link (`/join/<code>`) for players on their own devices.
+See [`docs/JEOPARDY.md`](docs/JEOPARDY.md) for the product and technical plan.
+
 ## Scripts
 
 | Command                             | Description                        |
@@ -59,9 +63,10 @@ composables/     Reusable client logic (auto-imported)
 layouts/         Layout components
 pages/           File-based routes
 server/api/      Nitro API routes
-server/utils/    Server-only utils (Prisma client, Zod env, repositories) — auto-imported
+server/routes/   Non-API Nitro routes, incl. the `_ws/room` WebSocket channel
+server/utils/    Server-only utils (Prisma client, Zod env, repositories, room registry) — auto-imported
 shared/          Types/schemas shared between client and server
-shared/game/     Pure, framework-agnostic game reducer (state, actions, selectors)
+shared/game/     Pure, framework-agnostic game core: reducer, selectors, room protocol
 stores/          Pinia stores
 prisma/          Prisma schema, migrations, board content + seed
 tests/e2e/       Playwright e2e tests

@@ -1,5 +1,4 @@
-import type { Clue, Game } from '../types/game'
-import type { GameState, Seat, Standing } from './types'
+import type { GameState, Seat, StateBoard, StateClue, Standing } from './types'
 
 /**
  * Pure, side-effect-free queries over `GameState`.
@@ -9,12 +8,20 @@ import type { GameState, Seat, Standing } from './types'
  */
 
 /** Every clue on the board, in category then row order. */
-export function allClues(board: Game): Clue[] {
+export function allClues(board: StateBoard): StateClue[] {
     return board.categories.flatMap((category) => category.clues)
 }
 
-export function findClue(board: Game, clueId: string): Clue | null {
+export function findClue(board: StateBoard, clueId: string): StateClue | null {
     return allClues(board).find((clue) => clue.id === clueId) ?? null
+}
+
+/**
+ * The expected response, or `null` on a player device — a redacted board simply does
+ * not carry it (docs/JEOPARDY.md §7).
+ */
+export function clueSolution(clue: StateClue): string | null {
+    return 'solution' in clue ? clue.solution : null
 }
 
 export function isClueRevealed(state: GameState, clueId: string): boolean {
@@ -22,7 +29,7 @@ export function isClueRevealed(state: GameState, clueId: string): boolean {
 }
 
 /** The clue currently on screen, if any. */
-export function currentClue(state: GameState): Clue | null {
+export function currentClue(state: GameState): StateClue | null {
     return state.currentClueId === null ? null : findClue(state.board, state.currentClueId)
 }
 

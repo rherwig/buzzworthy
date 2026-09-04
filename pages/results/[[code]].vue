@@ -2,20 +2,28 @@
 import { UiButton } from '~/shared/ui'
 
 /**
- * End-of-game screen (docs/JEOPARDY.md M2). The game only lives in memory, so a
- * direct visit or a refresh has nothing to show and goes back to the board picker;
- * a game still in progress returns to the board.
+ * End-of-game screen (docs/JEOPARDY.md M2), for a hotseat game (`/results`) or an
+ * online room (`/results/ACDEF`).
+ *
+ * A local game only lives in memory, so a direct visit or a refresh has nothing to
+ * show and goes back to the board picker; a game still in progress returns to the
+ * board. Online, the same checks are driven by the server's snapshot instead.
  */
 const game = useGameStore()
 const router = useRouter()
+const { online, link } = useRoomPage()
 
 const winners = computed(() => game.results.filter((entry) => entry.rank === 1))
 
 onMounted(() => {
+    if (online) {
+        return
+    }
+
     if (game.state === null) {
         void router.replace('/')
     } else if (game.phase !== 'done') {
-        void router.replace('/play')
+        void router.replace(link('play'))
     }
 })
 

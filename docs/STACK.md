@@ -1,6 +1,6 @@
 # Tech Stack Decision Record
 
-> Status: **Accepted** · Last updated: 2026-09-03
+> Status: **Accepted** · Last updated: 2026-09-04
 >
 > This document records the technology choices for this Vue/TypeScript web-project
 > template and the reasoning behind them. It is the single source of truth for the
@@ -39,6 +39,7 @@ This is a **template / boilerplate** for future team web projects. It optimizes 
 | Runtime validation     | **Zod**                                             | Accepted |
 | Git hooks              | **Husky + lint-staged**                             | Accepted |
 | DB seed runner         | **tsx** (executes `prisma/seed.ts`)                 | Accepted |
+| Realtime transport     | **Nitro WebSockets** (`defineWebSocketHandler`)     | Accepted |
 
 ### Deferred / explicitly out of scope (for now)
 
@@ -75,6 +76,20 @@ agents/teams may add them per-project — their absence is a decision, not an ov
   Prisma shells out to a plain command, so a TypeScript seed needs a TS runner: **tsx** was
   chosen because it is a single zero-config devDependency, unlike `ts-node`, which needs extra
   ESM configuration in a `"type": "module"` project. It is dev-only and never ships.
+
+### Nitro WebSockets (over Socket.IO or a hosted realtime service)
+
+- **What:** realtime channels are plain Nitro WebSocket handlers in `server/routes/`, enabled
+  with `nitro.experimental.websocket`. Messages are validated with Zod schemas that live in
+  `shared/`, so client and server are compile-checked against one protocol.
+- **Pros:** no extra dependency, no extra service to deploy, and the same shared-types story as
+  the rest of the Nitro layer. Built on crossws, so it works across the supported presets.
+- **Cons:** the flag is still marked experimental, there is no built-in reconnect/fallback
+  (clients handle that themselves), and in-memory channel state does not survive a restart or
+  scale across instances — keep such state behind a seam (see `server/utils/rooms.ts`) so it can
+  move to Redis later.
+- **Why:** matches the "single deploy, shared types" reasoning behind choosing Nitro at all;
+  Socket.IO would add a client bundle and a protocol the framework does not know about.
 
 ### Tailwind + Headless UI (no component library)
 

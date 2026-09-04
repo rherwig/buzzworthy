@@ -13,6 +13,12 @@ export default defineNuxtConfig({
             stylistic: false,
         },
     },
+    nitro: {
+        // Required by the room channel in server/routes/_ws (docs/JEOPARDY.md §7).
+        experimental: {
+            websocket: true,
+        },
+    },
     runtimeConfig: {
         // Server-only secrets are validated in server/utils/env.ts
         databaseUrl: process.env.DATABASE_URL,

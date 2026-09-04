@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { Category } from '~~/shared/types/game'
+import type { StateCategory } from '~~/shared/game'
 
 /**
  * The category × value grid. Presentational: it renders what it is given and asks
  * the parent to open a clue — the reducer decides whether that is allowed.
  */
 const props = defineProps<{
-    categories: Category[]
+    categories: readonly StateCategory[]
     revealedClueIds: readonly string[]
     /** Set while a clue is open or the room is paused, so the grid stops accepting clicks. */
     disabled?: boolean

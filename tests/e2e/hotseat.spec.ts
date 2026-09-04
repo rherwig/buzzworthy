@@ -17,7 +17,7 @@ async function hostFirstBoard(page: Page) {
     await expect(page.getByRole('heading', { name: 'Jeopardy' })).toBeVisible()
 
     await expect(async () => {
-        await page.getByRole('button', { name: 'Host' }).first().click()
+        await page.getByRole('button', { name: 'Host', exact: true }).first().click()
         await expect(page.getByRole('heading', { name: 'Lobby' })).toBeVisible({ timeout: 2_000 })
     }).toPass({ timeout: 15_000 })
 }

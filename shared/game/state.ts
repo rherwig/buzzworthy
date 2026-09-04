@@ -1,6 +1,5 @@
-import type { Game } from '../types/game'
 import { allClues, canSeatBuzz, findClue, isSeatOccupied, occupiedSeats, seatAt } from './selectors'
-import type { GamePhase, GameState, Seat, SeatKind, WagerBounds } from './types'
+import type { GamePhase, GameState, Seat, SeatKind, StateBoard, WagerBounds } from './types'
 
 /**
  * The game reducer: pure transitions from one `GameState` to the next.
@@ -38,7 +37,10 @@ function makeSeat(index: number, kind: SeatKind = 'local'): Seat {
  * All seats start as `local`, which is the M1 hotseat setup; the host switches them to
  * `open`/`closed` once online play lands (M3).
  */
-export function createGameState(board: Game, seatCount: number = DEFAULT_SEAT_COUNT): GameState {
+export function createGameState(
+    board: StateBoard,
+    seatCount: number = DEFAULT_SEAT_COUNT,
+): GameState {
     const count = clampSeatCount(seatCount)
 
     return {

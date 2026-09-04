@@ -99,6 +99,6 @@ export type PublicGame = z.infer<typeof publicGameSchema>
  * they don't declare, so a clue can never leak a field the player schema omits —
  * including fields added to `Clue` in the future.
  */
-export function toPublicGame(game: Game): PublicGame {
+export function toPublicGame(game: Game | PublicGame): PublicGame {
     return publicGameSchema.parse(game)
 }

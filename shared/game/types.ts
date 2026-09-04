@@ -1,4 +1,4 @@
-import type { Game } from '../types/game'
+import type { Game, PublicGame } from '../types/game'
 
 /**
  * Live game state types.
@@ -7,6 +7,20 @@ import type { Game } from '../types/game'
  * The reducer in `state.ts` is the only place allowed to produce a new `GameState`,
  * so every field is `readonly`.
  */
+
+/**
+ * The board a `GameState` carries.
+ *
+ * The host and the server hold the full board; a player client holds the redacted one
+ * (docs/JEOPARDY.md §7), and both drive the very same reducer and selectors. Solutions
+ * are therefore only reachable through `clueSolution`, which makes "the player device
+ * may not know the answer" a type-level property rather than a convention.
+ */
+export type StateBoard = Game | PublicGame
+
+export type StateCategory = StateBoard['categories'][number]
+
+export type StateClue = StateCategory['clues'][number]
 
 /** How a lobby seat is filled. */
 export type SeatKind = 'local' | 'open' | 'closed'
@@ -43,7 +57,7 @@ export interface BuzzEntry {
 
 export interface GameState {
     /** Host view of the board, including solutions. Player clients get a redacted copy. */
-    readonly board: Game
+    readonly board: StateBoard
     readonly seats: readonly Seat[]
     readonly phase: GamePhase
     /** Phase to return to once the host comes back; only set while `phase === 'paused'`. */
